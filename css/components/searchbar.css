@@ -1,0 +1,74 @@
+/* ============================================================
+   SEARCHBAR
+   Search form: category select + input + submit button.
+   ============================================================ */
+
+.searchbar {
+  display: flex;
+  align-items: stretch;
+  background-color: var(--color-surface);
+  border: 2px solid var(--color-primary-500);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  transition: box-shadow var(--transition-fast);
+}
+
+.searchbar:focus-within {
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+.searchbar__select {
+  border: none;
+  border-right: 1px solid var(--color-border);
+  background-color: var(--color-surface-2);
+  padding: 0 0.875rem;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  outline: none;
+}
+
+.searchbar__input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  padding: 0.625rem 1rem;
+  font-size: var(--font-size-base);
+  outline: none;
+  background-color: transparent;
+}
+
+.searchbar__button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 1.25rem;
+  background-color: var(--color-primary-500);
+  color: var(--color-text-inverse);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  transition: background-color var(--transition-fast);
+}
+
+.searchbar__button:hover {
+  background-color: var(--color-primary-600);
+}
+
+.searchbar__button svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 575.98px) {
+  .searchbar__select {
+    display: none;
+  }
+
+  .searchbar__button span {
+    display: none;
+  }
+
+  .searchbar__button {
+    padding-inline: 1rem;
+  }
+}

@@ -1,0 +1,282 @@
+/* ============================================================
+   NAVBAR / SITE HEADER
+   Top utility bar + sticky main bar + category bar + mobile drawer.
+   ============================================================ */
+
+.site-header {
+  position: relative;
+  z-index: var(--z-sticky);
+}
+
+/* ---- Top utility bar ---- */
+.navbar-top {
+  background-color: var(--color-dark);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.navbar-top__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+  gap: var(--space-4);
+}
+
+.navbar-top__left {
+  color: var(--color-text-inverse);
+  opacity: 0.9;
+}
+
+.navbar-top__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.navbar-top__link {
+  color: #cbd5e1;
+  transition: color var(--transition-fast);
+}
+
+.navbar-top__link:hover {
+  color: var(--color-text-inverse);
+}
+
+.navbar-top__link--sell {
+  color: var(--color-accent-500);
+  font-weight: var(--font-weight-semibold);
+}
+
+.navbar-top__link--sell:hover {
+  color: var(--color-accent-600);
+}
+
+/* ---- Main bar ---- */
+.navbar-main {
+  position: sticky;
+  top: 0;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  transition: box-shadow var(--transition-normal);
+}
+
+.site-header--scrolled .navbar-main {
+  box-shadow: var(--shadow-md);
+}
+
+.navbar-main__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: var(--navbar-height);
+}
+
+/* Brand */
+.navbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.navbar-brand:hover {
+  color: inherit;
+}
+
+.navbar-brand__logo {
+  width: 34px;
+  height: 34px;
+}
+
+.navbar-brand__name {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.navbar-brand__name::after {
+  content: "";
+}
+
+/* Actions */
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.icon-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-full);
+  color: var(--color-text);
+  transition: background-color var(--transition-fast),
+    color var(--transition-fast), transform var(--transition-fast);
+}
+
+.icon-button:hover {
+  background-color: var(--color-surface-2);
+  color: var(--color-primary-600);
+}
+
+.icon-button:active {
+  transform: scale(0.92);
+}
+
+.icon-button svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Count badge on icons */
+.badge-count {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 var(--space-1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background-color: var(--color-danger);
+  color: var(--color-text-inverse);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+  border: 2px solid var(--color-surface);
+}
+
+.badge-count[hidden] {
+  display: none;
+}
+
+/* Hamburger (mobile) */
+.navbar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  flex-shrink: 0;
+  transition: background-color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.navbar-toggle:hover {
+  background-color: var(--color-surface-2);
+}
+
+.navbar-toggle:active {
+  transform: scale(0.92);
+}
+
+.navbar-toggle svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ---- Category bar ---- */
+.navbar-categories {
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.navbar-categories__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-block: var(--space-2);
+}
+
+.navbar-categories__inner::-webkit-scrollbar {
+  display: none;
+}
+
+.navbar-categories__link {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  transition: background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.navbar-categories__link:hover {
+  background-color: var(--color-primary-50);
+  color: var(--color-primary-600);
+}
+
+.navbar-categories__link.is-active {
+  background-color: var(--color-primary-500);
+  color: var(--color-text-inverse);
+}
+
+.navbar-categories__link--deals {
+  color: var(--color-accent-600);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ---- Fallback when partial fails to load ---- */
+.navbar-fallback {
+  display: block;
+  padding: var(--space-4);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-600);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 767.98px) {
+  .navbar-top__right {
+    display: none;
+  }
+
+  .navbar-top__left {
+    width: 100%;
+    text-align: center;
+  }
+
+  .navbar-main__inner {
+    flex-wrap: wrap;
+    padding-block: var(--space-2);
+  }
+
+  .navbar-search {
+    order: 3;
+    width: 100%;
+  }
+
+  .navbar-brand__name {
+    font-size: var(--font-size-md);
+  }
+
+  .navbar-categories {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .navbar-toggle {
+    display: none;
+  }
+}
+
+@media (max-width: 399.98px) {
+  .icon-button--account {
+    display: none;
+  }
+}

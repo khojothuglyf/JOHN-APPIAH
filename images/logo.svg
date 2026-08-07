@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40" role="img" aria-label="Marketplace logo">
+  <defs>
+    <linearGradient id="mp-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2f6fed"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="38" height="38" rx="10" fill="url(#mp-bg)"/>
+  <path d="M13 16h14l-1.2 10.2a2 2 0 0 1-2 1.8h-7.6a2 2 0 0 1-2-1.8L13 16z" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M16.5 16v-2a3.5 3.5 0 0 1 7 0v2" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+</svg>

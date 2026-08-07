@@ -1,0 +1,134 @@
+/* ============================================================
+   CHECKOUT PAGE
+   Delivery/payment form and the order summary column.
+   ============================================================ */
+
+.checkout-page {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+  padding-bottom: var(--space-8);
+}
+
+/* ---- Sections (Contact / Shipping / Payment) ---- */
+.checkout-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.checkout-section__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin-bottom: var(--space-4);
+}
+
+.checkout-section__step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  background-color: var(--color-primary-50);
+  color: var(--color-primary-600);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.checkout-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0 var(--space-4);
+}
+
+.checkout-grid--2 {
+  grid-template-columns: 1fr;
+}
+
+.checkout-card-fields[hidden] {
+  display: none;
+}
+
+/* ---- Summary items ---- */
+.checkout-summary__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.checkout-summary__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.checkout-summary__thumb {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-2);
+  overflow: hidden;
+}
+
+.checkout-summary__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.checkout-summary__name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.checkout-summary__qty {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
+}
+
+.checkout-summary__line-total {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+@media (min-width: 720px) {
+  .checkout-grid--2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 992px) {
+  .checkout-page {
+    grid-template-columns: 1fr 360px;
+    align-items: start;
+  }
+
+  .checkout-section {
+    margin-bottom: var(--space-6);
+  }
+}

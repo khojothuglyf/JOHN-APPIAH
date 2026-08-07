@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Products | Marketplace</title>
+    <meta name="description" content="Browse, search and sort all products on Marketplace." />
+    <link rel="icon" href="../images/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/main.css" />
+    <link rel="stylesheet" href="../css/pages/catalog.css" />
+  </head>
+  <body>
+    <div data-component="navbar"></div>
+
+    <main id="main">
+      <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <span class="breadcrumb__item"><a href="../index.html">Home</a></span>
+          <span class="breadcrumb__item" aria-current="page">Products</span>
+        </nav>
+
+        <div class="page-header">
+          <h1 class="page-header__title">Products</h1>
+          <p class="page-header__subtitle">
+            Browse the full catalog. Use search and filters to narrow things down.
+          </p>
+        </div>
+
+        <form class="catalog-toolbar" data-catalog-form novalidate>
+          <div class="catalog-toolbar__search">
+            <div class="form-group">
+              <label class="form-label" for="catalog-search">Search</label>
+              <input
+                class="form-input"
+                id="catalog-search"
+                name="q"
+                type="search"
+                autocomplete="off"
+                placeholder="Search products..."
+                data-catalog-search
+              />
+            </div>
+          </div>
+
+          <div class="catalog-toolbar__field">
+            <label for="catalog-category">Category</label>
+            <select class="form-select" id="catalog-category" name="categoryId" data-catalog-category>
+              <option value="">All categories</option>
+            </select>
+          </div>
+
+          <div class="catalog-toolbar__field">
+            <label for="catalog-sort">Sort by</label>
+            <select class="form-select" id="catalog-sort" name="sort" data-catalog-sort>
+              <option value="">Featured</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+              <option value="newest">Newest</option>
+              <option value="rating">Top Rated</option>
+            </select>
+          </div>
+
+          <div class="catalog-toolbar__actions">
+            <button class="btn btn--primary" type="submit">Apply</button>
+            <a class="btn btn--ghost" href="products.html">Reset</a>
+          </div>
+        </form>
+
+        <div class="catalog-results">
+          <p class="catalog-results__count" data-results-count></p>
+        </div>
+
+        <div class="grid grid--fill" style="--grid-min: 220px" data-products>
+          <div class="card">
+            <div class="skeleton skeleton--image"></div>
+            <div class="card__body">
+              <div class="skeleton skeleton--text"></div>
+              <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+              <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="skeleton skeleton--image"></div>
+            <div class="card__body">
+              <div class="skeleton skeleton--text"></div>
+              <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+              <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="skeleton skeleton--image"></div>
+            <div class="card__body">
+              <div class="skeleton skeleton--text"></div>
+              <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+              <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="skeleton skeleton--image"></div>
+            <div class="card__body">
+              <div class="skeleton skeleton--text"></div>
+              <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+              <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="skeleton skeleton--image"></div>
+            <div class="card__body">
+              <div class="skeleton skeleton--text"></div>
+              <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+              <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="skeleton skeleton--image"></div>
+            <div class="card__body">
+              <div class="skeleton skeleton--text"></div>
+              <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+              <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="skeleton skeleton--image"></div>
+            <div class="card__body">
+              <div class="skeleton skeleton--text"></div>
+              <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+              <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="skeleton skeleton--image"></div>
+            <div class="card__body">
+              <div class="skeleton skeleton--text"></div>
+              <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+              <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+            </div>
+          </div>
+        </div>
+
+        <nav class="pagination" data-pagination aria-label="Product pages"></nav>
+      </div>
+    </main>
+
+    <div data-component="footer"></div>
+
+    <script type="module" src="../js/app.js"></script>
+    <script type="module" src="../js/pages/products.js"></script>
+  </body>
+</html>

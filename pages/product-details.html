@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Product Details | Marketplace</title>
+    <meta name="description" content="View product details, reviews and purchase options." />
+    <link rel="icon" href="../images/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/main.css" />
+    <link rel="stylesheet" href="../css/pages/catalog.css" />
+  </head>
+  <body>
+    <div data-component="navbar"></div>
+
+    <main id="main">
+      <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <span class="breadcrumb__item"><a href="../index.html">Home</a></span>
+          <span class="breadcrumb__item"><a href="products.html">Products</a></span>
+          <span class="breadcrumb__item" data-crumb-category></span>
+          <span class="breadcrumb__item" data-crumb-name aria-current="page"></span>
+        </nav>
+      </div>
+
+      <div class="container">
+        <div class="product-detail" data-product-detail>
+          <div class="product-detail__gallery">
+            <div class="skeleton skeleton--image" data-gallery-skeleton></div>
+            <img
+              class="product-detail__image"
+              data-product-image
+              hidden
+              alt="Product image"
+            />
+            <span class="badge badge--danger product-detail__badge" data-product-badge hidden></span>
+          </div>
+
+          <div class="product-detail__info">
+            <p class="product-detail__category" data-product-category></p>
+            <h1 class="product-detail__title" data-product-title></h1>
+            <span class="product-detail__rating" data-product-rating></span>
+
+            <div class="product-detail__price-row">
+              <span class="product-detail__price" data-product-price></span>
+              <span class="product-detail__old-price" data-product-old-price hidden></span>
+              <span class="badge badge--danger product-detail__save" data-product-save hidden></span>
+            </div>
+
+            <p class="product-detail__description" data-product-description></p>
+
+            <p class="product-detail__stock" data-product-stock></p>
+
+            <div class="product-detail__buy">
+              <div class="quantity-stepper">
+                <button class="quantity-stepper__btn" type="button" data-qty-minus aria-label="Decrease quantity">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+                </button>
+                <input
+                  class="quantity-stepper__input"
+                  type="number"
+                  value="1"
+                  min="1"
+                  max="99"
+                  aria-label="Quantity"
+                  data-qty-input
+                />
+                <button class="quantity-stepper__btn" type="button" data-qty-plus aria-label="Increase quantity">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                </button>
+              </div>
+              <button class="btn btn--primary btn--lg" type="button" data-add-to-cart>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                Add to Cart
+              </button>
+            </div>
+
+            <dl class="product-detail__meta">
+              <div>SKU: <span data-product-sku></span></div>
+              <div>
+                Category:
+                <a data-product-category-link href="products.html"></a>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <section class="section section--muted" data-related-section hidden>
+        <div class="container">
+          <div class="section__header">
+            <h2 class="section__title">You may also like</h2>
+            <a class="section__link" href="products.html">View all products</a>
+          </div>
+          <div class="grid grid--fill" style="--grid-min: 220px" data-related-products></div>
+        </div>
+      </section>
+    </main>
+
+    <div data-component="footer"></div>
+
+    <script type="module" src="../js/app.js"></script>
+    <script type="module" src="../js/pages/product-details.js"></script>
+  </body>
+</html>

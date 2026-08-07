@@ -1,0 +1,130 @@
+/* ============================================================
+   ANIMATIONS & MOTION
+   Shared keyframes, entrance utilities, scroll reveal and
+   micro-interactions. Reduced-motion is handled globally in
+   base.css plus a dedicated override at the bottom of this file.
+   ============================================================ */
+
+/* ---- Keyframes ---- */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ---- Entrance utilities ---- */
+.animate-fade-in {
+  animation: fade-in var(--transition-normal) both;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 500ms ease both;
+}
+
+.animate-scale-in {
+  animation: scale-in var(--transition-normal) both;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right var(--transition-normal) both;
+}
+
+.animate-delay-1 {
+  animation-delay: 100ms;
+}
+
+.animate-delay-2 {
+  animation-delay: 200ms;
+}
+
+.animate-delay-3 {
+  animation-delay: 300ms;
+}
+
+.animate-delay-4 {
+  animation-delay: 400ms;
+}
+
+/* ---- Scroll reveal ----
+   Mark any element with `data-reveal` and optionally
+   `data-reveal-delay="120"` (ms). js/utils/reveal.js adds
+   `.is-visible` when the element scrolls into view. */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity var(--transition-normal),
+    transform var(--transition-normal);
+}
+
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---- Badge pop (navbar cart/wishlist count) ---- */
+.badge-count.is-pop {
+  animation: pop 300ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .animate-fade-in,
+  .animate-fade-in-up,
+  .animate-scale-in,
+  .animate-slide-in-right {
+    animation: none;
+  }
+}

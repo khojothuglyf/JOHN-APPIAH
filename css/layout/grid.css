@@ -1,0 +1,56 @@
+/* ============================================================
+   GRID
+   Responsive layout grids used across cards, sections, etc.
+   ============================================================ */
+
+.grid {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* Auto-fill grid: columns size themselves from the cell
+   minimum set via --grid-min (defaults to a product-card
+   friendly width). */
+.grid--fill {
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(min(100%, var(--grid-min, 240px)), 1fr)
+  );
+}
+
+.grid--2 {
+  grid-template-columns: repeat(1, 1fr);
+}
+
+.grid--3 {
+  grid-template-columns: repeat(1, 1fr);
+}
+
+.grid--4 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.grid--cols {
+  grid-template-columns: var(--grid-cols);
+}
+
+@media (min-width: 576px) {
+  .grid--2,
+  .grid--3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 992px) {
+  .grid--2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid--3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .grid--4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}

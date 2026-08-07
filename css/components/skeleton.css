@@ -1,0 +1,59 @@
+/* ============================================================
+   SKELETON
+   Shimmering placeholders shown while data loads.
+   ============================================================ */
+
+.skeleton {
+  position: relative;
+  display: block;
+  background-color: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.65),
+    transparent
+  );
+  animation: shimmer 1.4s infinite;
+}
+
+.skeleton--image {
+  aspect-ratio: 1 / 1;
+  border-radius: 0;
+}
+
+.skeleton--card {
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-md);
+}
+
+.skeleton--text {
+  height: 12px;
+  margin-bottom: var(--space-2);
+}
+
+.skeleton--text-sm {
+  height: 10px;
+}
+
+.skeleton--text-lg {
+  height: 18px;
+}
+
+.skeleton--circle {
+  border-radius: var(--radius-full);
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

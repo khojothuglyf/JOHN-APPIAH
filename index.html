@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Marketplace - Shop Smart, Live Better</title>
+    <meta
+      name="description"
+      content="Marketplace is a modern e-commerce platform connecting buyers and trusted sellers. Discover millions of products at the best prices."
+    />
+    <link rel="icon" href="images/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/pages/home.css" />
+  </head>
+  <body>
+    <div data-component="navbar"></div>
+
+    <main id="main">
+      <!-- Hero -->
+      <section class="hero">
+        <div class="container hero__inner">
+          <div class="hero__content">
+            <p class="hero__eyebrow animate-fade-in-up animate-delay-1">
+              Welcome to Marketplace
+            </p>
+            <h1
+              class="hero__title animate-fade-in-up animate-delay-2"
+            >
+              Everything you love, delivered to your door
+            </h1>
+            <p
+              class="hero__subtitle animate-fade-in-up animate-delay-3"
+            >
+              Discover millions of products from trusted sellers at the best
+              prices - with secure payments and fast delivery.
+            </p>
+            <div class="hero__actions animate-fade-in-up animate-delay-4">
+              <a class="btn btn--accent btn--lg" href="pages/products.html">Shop Now</a>
+              <a class="btn btn--outline-inverse btn--lg" href="pages/categories.html">
+                Browse Categories
+              </a>
+            </div>
+            <ul class="hero__stats animate-fade-in-up animate-delay-4">
+              <li><strong>1M+</strong><span>Products</span></li>
+              <li><strong>50K+</strong><span>Trusted sellers</span></li>
+              <li><strong>4.8</strong><span>Average rating</span></li>
+            </ul>
+          </div>
+          <div class="hero__visual animate-scale-in animate-delay-2" aria-hidden="true">
+            <div class="hero__card hero__card--1"></div>
+            <div class="hero__card hero__card--2"></div>
+            <div class="hero__card hero__card--3"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Categories -->
+      <section class="section">
+        <div class="container">
+          <div class="section__header" data-reveal>
+            <h2 class="section__title">Shop by Category</h2>
+            <a class="section__link" href="pages/categories.html">View all categories</a>
+          </div>
+          <div class="grid grid--fill" style="--grid-min: 200px" data-categories>
+            <div class="category-card">
+              <span class="skeleton skeleton--circle" style="width: 46px; height: 46px"></span>
+              <span style="flex: 1">
+                <span class="skeleton skeleton--text" style="width: 70%"></span>
+                <span class="skeleton skeleton--text-sm" style="width: 50%"></span>
+              </span>
+            </div>
+            <div class="category-card">
+              <span class="skeleton skeleton--circle" style="width: 46px; height: 46px"></span>
+              <span style="flex: 1">
+                <span class="skeleton skeleton--text" style="width: 70%"></span>
+                <span class="skeleton skeleton--text-sm" style="width: 50%"></span>
+              </span>
+            </div>
+            <div class="category-card">
+              <span class="skeleton skeleton--circle" style="width: 46px; height: 46px"></span>
+              <span style="flex: 1">
+                <span class="skeleton skeleton--text" style="width: 70%"></span>
+                <span class="skeleton skeleton--text-sm" style="width: 50%"></span>
+              </span>
+            </div>
+            <div class="category-card">
+              <span class="skeleton skeleton--circle" style="width: 46px; height: 46px"></span>
+              <span style="flex: 1">
+                <span class="skeleton skeleton--text" style="width: 70%"></span>
+                <span class="skeleton skeleton--text-sm" style="width: 50%"></span>
+              </span>
+            </div>
+            <div class="category-card">
+              <span class="skeleton skeleton--circle" style="width: 46px; height: 46px"></span>
+              <span style="flex: 1">
+                <span class="skeleton skeleton--text" style="width: 70%"></span>
+                <span class="skeleton skeleton--text-sm" style="width: 50%"></span>
+              </span>
+            </div>
+            <div class="category-card">
+              <span class="skeleton skeleton--circle" style="width: 46px; height: 46px"></span>
+              <span style="flex: 1">
+                <span class="skeleton skeleton--text" style="width: 70%"></span>
+                <span class="skeleton skeleton--text-sm" style="width: 50%"></span>
+              </span>
+            </div>
+            <div class="category-card">
+              <span class="skeleton skeleton--circle" style="width: 46px; height: 46px"></span>
+              <span style="flex: 1">
+                <span class="skeleton skeleton--text" style="width: 70%"></span>
+                <span class="skeleton skeleton--text-sm" style="width: 50%"></span>
+              </span>
+            </div>
+            <div class="category-card">
+              <span class="skeleton skeleton--circle" style="width: 46px; height: 46px"></span>
+              <span style="flex: 1">
+                <span class="skeleton skeleton--text" style="width: 70%"></span>
+                <span class="skeleton skeleton--text-sm" style="width: 50%"></span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Featured products (data region - Phase 3) -->
+      <section class="section section--muted">
+        <div class="container">
+          <div class="section__header" data-reveal>
+            <h2 class="section__title">Featured Products</h2>
+            <a class="section__link" href="pages/products.html">View all products</a>
+          </div>
+          <div class="grid grid--fill" data-featured-products>
+            <div class="card">
+              <div class="skeleton skeleton--image"></div>
+              <div class="card__body">
+                <div class="skeleton skeleton--text"></div>
+                <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+                <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="skeleton skeleton--image"></div>
+              <div class="card__body">
+                <div class="skeleton skeleton--text"></div>
+                <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+                <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="skeleton skeleton--image"></div>
+              <div class="card__body">
+                <div class="skeleton skeleton--text"></div>
+                <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+                <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="skeleton skeleton--image"></div>
+              <div class="card__body">
+                <div class="skeleton skeleton--text"></div>
+                <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+                <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Why shop with us -->
+      <section class="section">
+        <div class="container">
+          <div class="section__header" data-reveal>
+            <h2 class="section__title">Why Shop With Us</h2>
+          </div>
+          <div class="why-us">
+            <div class="why-us__item" data-reveal data-reveal-delay="0">
+              <span class="why-us__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </span>
+              <div>
+                <h3 class="why-us__title">Secure Payments</h3>
+                <p class="why-us__text">Pay safely with trusted, encrypted payment methods.</p>
+              </div>
+            </div>
+            <div class="why-us__item" data-reveal data-reveal-delay="80">
+              <span class="why-us__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg>
+              </span>
+              <div>
+                <h3 class="why-us__title">Fast Delivery</h3>
+                <p class="why-us__text">Free and quick delivery on thousands of products.</p>
+              </div>
+            </div>
+            <div class="why-us__item" data-reveal data-reveal-delay="160">
+              <span class="why-us__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="m12 7 4 4-4 4"/><path d="m8 11 4-4 4 4"/></svg>
+              </span>
+              <div>
+                <h3 class="why-us__title">Easy Returns</h3>
+                <p class="why-us__text">Not satisfied? Return items within 30 days.</p>
+              </div>
+            </div>
+            <div class="why-us__item" data-reveal data-reveal-delay="240">
+              <span class="why-us__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+              </span>
+              <div>
+                <h3 class="why-us__title">24/7 Support</h3>
+                <p class="why-us__text">Our support team is here around the clock.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Seller CTA -->
+      <section class="cta-band">
+        <div class="container cta-band__inner">
+          <div data-reveal>
+            <h2 class="cta-band__title">Are you a seller?</h2>
+            <p class="cta-band__text">
+              Start selling in minutes and reach millions of customers worldwide.
+            </p>
+          </div>
+          <a class="btn btn--accent btn--lg" href="pages/seller-dashboard.html" data-reveal data-reveal-delay="120">
+            Start Selling
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <div data-component="footer"></div>
+
+    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/pages/home.js"></script>
+  </body>
+</html>

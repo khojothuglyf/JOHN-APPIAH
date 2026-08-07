@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shopping Cart | Marketplace</title>
+    <meta name="description" content="Review the items in your shopping cart." />
+    <link rel="icon" href="../images/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/main.css" />
+    <link rel="stylesheet" href="../css/pages/catalog.css" />
+    <link rel="stylesheet" href="../css/pages/cart.css" />
+  </head>
+  <body>
+    <div data-component="navbar"></div>
+
+    <main id="main">
+      <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <span class="breadcrumb__item"><a href="../index.html">Home</a></span>
+          <span class="breadcrumb__item" aria-current="page">Shopping Cart</span>
+        </nav>
+
+        <div class="page-header">
+          <h1 class="page-header__title">Shopping Cart</h1>
+          <p class="page-header__subtitle" data-cart-count-text></p>
+        </div>
+
+        <div class="cart-page" data-cart-page hidden>
+          <section class="cart-items" data-cart-items aria-label="Cart items"></section>
+
+          <aside class="cart-summary card" aria-label="Order summary">
+            <h2 class="cart-summary__title">Order Summary</h2>
+            <div class="cart-summary__rows">
+              <div class="cart-summary__row">
+                <span>Subtotal</span>
+                <strong data-summary-subtotal></strong>
+              </div>
+              <div class="cart-summary__row">
+                <span>Shipping</span>
+                <strong>Free</strong>
+              </div>
+            </div>
+            <div class="cart-summary__total">
+              <span>Total</span>
+              <span data-summary-total></span>
+            </div>
+            <div class="cart-summary__actions">
+              <a class="btn btn--primary btn--lg btn--block" href="checkout.html" data-checkout>
+                Proceed to Checkout
+              </a>
+              <a class="btn btn--ghost btn--block" href="products.html">Continue shopping</a>
+              <button class="cart-summary__clear" type="button" data-clear-cart>
+                Clear cart
+              </button>
+            </div>
+          </aside>
+        </div>
+
+        <div class="page-placeholder" data-cart-empty hidden>
+          <span class="page-placeholder__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+          </span>
+          <h2 class="page-placeholder__title">Your cart is empty</h2>
+          <p class="page-placeholder__text">
+            Looks like you haven't added anything yet. Discover great deals in the catalog.
+          </p>
+          <a class="btn btn--primary" href="products.html">Start shopping</a>
+        </div>
+      </div>
+    </main>
+
+    <div data-component="footer"></div>
+
+    <script type="module" src="../js/app.js"></script>
+    <script type="module" src="../js/pages/cart.js"></script>
+  </body>
+</html>

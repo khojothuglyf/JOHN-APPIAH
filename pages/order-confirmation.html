@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Order Confirmation | Marketplace</title>
+    <meta name="description" content="Your Marketplace order was placed successfully." />
+    <link rel="icon" href="../images/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/main.css" />
+    <link rel="stylesheet" href="../css/pages/checkout.css" />
+    <link rel="stylesheet" href="../css/pages/orders.css" />
+  </head>
+  <body>
+    <div data-component="navbar"></div>
+
+    <main id="main">
+      <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <span class="breadcrumb__item"><a href="../index.html">Home</a></span>
+          <span class="breadcrumb__item"><a href="orders.html">My Orders</a></span>
+          <span class="breadcrumb__item" aria-current="page">Order Confirmation</span>
+        </nav>
+
+        <div class="confirmation" data-confirmation hidden>
+          <div class="confirmation__banner card">
+            <span class="confirmation__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+            </span>
+            <h1 class="confirmation__title">Thank you! Order placed</h1>
+            <p class="confirmation__text" data-confirmation-text></p>
+          </div>
+
+          <div class="order-card card">
+            <div data-order-header></div>
+
+            <h3 class="order-card__subtitle">Items</h3>
+            <div class="order-card__items" data-order-items></div>
+
+            <div data-order-details></div>
+
+            <div class="order-card__actions">
+              <a class="btn btn--primary" href="orders.html">View your orders</a>
+              <a class="btn btn--ghost" href="products.html">Continue shopping</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="page-placeholder" data-confirmation-not-found hidden>
+          <span class="page-placeholder__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
+          </span>
+          <h1 class="page-placeholder__title">Order not found</h1>
+          <p class="page-placeholder__text">
+            We couldn't find that order. It may have been placed on another device.
+          </p>
+          <a class="btn btn--primary" href="orders.html">Go to My Orders</a>
+        </div>
+      </div>
+    </main>
+
+    <div data-component="footer"></div>
+
+    <script type="module" src="../js/app.js"></script>
+    <script type="module" src="../js/pages/order-confirmation.js"></script>
+  </body>
+</html>

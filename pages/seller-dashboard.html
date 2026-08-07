@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seller Dashboard | Marketplace</title>
+    <meta name="description" content="Manage your products, orders and sales as a Marketplace seller." />
+    <link rel="icon" href="../images/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/main.css" />
+    <link rel="stylesheet" href="../css/pages/seller-dashboard.css" />
+  </head>
+  <body>
+    <div data-component="navbar"></div>
+
+    <main id="main">
+      <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <span class="breadcrumb__item"><a href="../index.html">Home</a></span>
+          <span class="breadcrumb__item" aria-current="page">Seller Dashboard</span>
+        </nav>
+
+        <div class="page-header page-header__inner">
+          <div>
+            <h1 class="page-header__title">Seller Dashboard</h1>
+            <p class="page-header__subtitle">
+              Welcome back, <strong data-seller-name></strong>. Here's your shop at a glance.
+            </p>
+          </div>
+          <a class="btn btn--primary" href="products.html">View storefront</a>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card card">
+            <span class="stat-card__icon stat-card__icon--primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            </span>
+            <div>
+              <p class="stat-card__label">Products</p>
+              <p class="stat-card__value" data-stat-products></p>
+            </div>
+          </div>
+          <div class="stat-card card">
+            <span class="stat-card__icon stat-card__icon--info">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+            </span>
+            <div>
+              <p class="stat-card__label">Active orders</p>
+              <p class="stat-card__value" data-stat-active-orders></p>
+            </div>
+          </div>
+          <div class="stat-card card">
+            <span class="stat-card__icon stat-card__icon--warning">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+            </span>
+            <div>
+              <p class="stat-card__label">Pending fulfilment</p>
+              <p class="stat-card__value" data-stat-pending-orders></p>
+            </div>
+          </div>
+          <div class="stat-card card">
+            <span class="stat-card__icon stat-card__icon--success">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </span>
+            <div>
+              <p class="stat-card__label">Revenue</p>
+              <p class="stat-card__value" data-stat-revenue></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-tabs" role="tablist" aria-label="Dashboard sections">
+          <button class="dashboard-tabs__tab is-active" type="button"
+            data-tab="products" role="tab" aria-selected="true">
+            Products
+          </button>
+          <button class="dashboard-tabs__tab" type="button"
+            data-tab="orders" role="tab" aria-selected="false" aria-controls="orders-panel">
+            Orders
+          </button>
+        </div>
+
+        <section data-panel="products" role="tabpanel" aria-label="Products">
+          <div class="dashboard-toolbar">
+            <h2 class="dashboard-section-title">Your products <span data-products-count></span></h2>
+            <button class="btn btn--primary btn--sm" type="button" data-add-product>
+              Add product
+            </button>
+          </div>
+
+          <div class="seller-table-wrap card" data-products-table hidden>
+            <table class="seller-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Category</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Status</th>
+                  <th class="u-text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody data-products-list></tbody>
+            </table>
+          </div>
+
+          <div class="page-placeholder" data-products-empty hidden>
+            <span class="page-placeholder__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1Z"/></svg>
+            </span>
+            <h2 class="page-placeholder__title">No products yet</h2>
+            <p class="page-placeholder__text">Add your first product to start selling on Marketplace.</p>
+            <button class="btn btn--primary" type="button" data-add-product>Add product</button>
+          </div>
+        </section>
+
+        <section data-panel="orders" role="tabpanel" aria-label="Orders" hidden>
+          <div class="dashboard-toolbar">
+            <h2 class="dashboard-section-title">Orders <span data-orders-count></span></h2>
+          </div>
+          <div class="seller-orders" data-orders-list></div>
+          <div class="page-placeholder" data-orders-empty hidden>
+            <span class="page-placeholder__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+            </span>
+            <h2 class="page-placeholder__title">No orders yet</h2>
+            <p class="page-placeholder__text">
+              Orders placed through checkout will appear here for fulfilment.
+            </p>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Product create / edit modal -->
+    <div class="modal" data-modal="product" aria-hidden="true">
+      <div class="modal__backdrop" data-modal-close></div>
+      <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
+        <div class="modal__header">
+          <h2 class="modal__title" id="product-modal-title" data-product-modal-title>Add product</h2>
+          <button class="modal__close" type="button" data-modal-close aria-label="Close dialog">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <form data-product-form novalidate>
+          <div class="modal__body">
+            <input type="hidden" name="id" data-product-id />
+
+            <div class="form-group" data-field="name">
+              <label class="form-label" for="product-name">Product name <span class="form-required">*</span></label>
+              <input class="form-input" id="product-name" type="text" name="name" placeholder="e.g. Wireless Headphones" />
+              <p class="form-error" data-error></p>
+            </div>
+
+            <div class="form-group" data-field="category">
+              <label class="form-label" for="product-category">Category <span class="form-required">*</span></label>
+              <select class="form-select" id="product-category" name="category">
+                <option value="">Select a category</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Fashion">Fashion</option>
+                <option value="Home & Living">Home &amp; Living</option>
+                <option value="Beauty & Health">Beauty &amp; Health</option>
+                <option value="Sports & Outdoors">Sports &amp; Outdoors</option>
+                <option value="Toys & Games">Toys &amp; Games</option>
+                <option value="Books">Books</option>
+              </select>
+              <p class="form-error" data-error></p>
+            </div>
+
+            <div class="form-grid form-grid--2">
+              <div class="form-group" data-field="price">
+                <label class="form-label" for="product-price">Price <span class="form-required">*</span></label>
+                <input class="form-input" id="product-price" type="number" name="price" min="0" step="0.01" placeholder="0.00" />
+                <p class="form-error" data-error></p>
+              </div>
+              <div class="form-group" data-field="oldPrice">
+                <label class="form-label" for="product-old-price">Compare-at price</label>
+                <input class="form-input" id="product-old-price" type="number" name="oldPrice" min="0" step="0.01" placeholder="Optional" />
+                <p class="form-error" data-error></p>
+              </div>
+            </div>
+
+            <div class="form-grid form-grid--2">
+              <div class="form-group" data-field="stock">
+                <label class="form-label" for="product-stock">Stock <span class="form-required">*</span></label>
+                <input class="form-input" id="product-stock" type="number" name="stock" min="0" step="1" placeholder="0" />
+                <p class="form-error" data-error></p>
+              </div>
+              <div class="form-group" data-field="status">
+                <label class="form-label" for="product-status">Status <span class="form-required">*</span></label>
+                <select class="form-select" id="product-status" name="status">
+                  <option value="ACTIVE">Active (visible in store)</option>
+                  <option value="INACTIVE">Inactive (hidden)</option>
+                </select>
+                <p class="form-error" data-error></p>
+              </div>
+            </div>
+
+            <div class="form-group" data-field="imageUrl">
+              <label class="form-label" for="product-image">Image URL</label>
+              <input class="form-input" id="product-image" type="url" name="imageUrl" placeholder="https://example.com/image.jpg" />
+              <p class="form-error" data-error></p>
+            </div>
+
+            <div class="form-group" data-field="description">
+              <label class="form-label" for="product-description">Description</label>
+              <textarea class="form-textarea" id="product-description" name="description" rows="3" placeholder="Describe your product..."></textarea>
+              <p class="form-error" data-error></p>
+            </div>
+          </div>
+          <div class="modal__footer">
+            <button class="btn btn--ghost" type="button" data-modal-close>Cancel</button>
+            <button class="btn btn--primary" type="submit" data-submit>
+              <span data-submit-spinner class="spinner spinner--sm" hidden></span>
+              Save product
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Delete confirmation modal -->
+    <div class="modal modal--sm" data-modal="confirm" aria-hidden="true">
+      <div class="modal__backdrop" data-modal-close></div>
+      <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+        <div class="modal__header">
+          <h2 class="modal__title" id="confirm-modal-title">Delete product?</h2>
+          <button class="modal__close" type="button" data-modal-close aria-label="Close dialog">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="modal__body">
+          <p class="u-text-muted" data-confirm-text>
+            This action cannot be undone.
+          </p>
+        </div>
+        <div class="modal__footer">
+          <button class="btn btn--ghost" type="button" data-modal-close>Cancel</button>
+          <button class="btn btn--danger" type="button" data-confirm-delete>Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <div data-component="footer"></div>
+
+    <script type="module" src="../js/app.js"></script>
+    <script type="module" src="../js/pages/seller-dashboard.js"></script>
+  </body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Checkout | Marketplace</title>
+    <meta name="description" content="Complete your purchase securely on Marketplace." />
+    <link rel="icon" href="../images/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/main.css" />
+    <link rel="stylesheet" href="../css/pages/cart.css" />
+    <link rel="stylesheet" href="../css/pages/checkout.css" />
+  </head>
+  <body>
+    <div data-component="navbar"></div>
+
+    <main id="main">
+      <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <span class="breadcrumb__item"><a href="../index.html">Home</a></span>
+          <span class="breadcrumb__item"><a href="cart.html">Cart</a></span>
+          <span class="breadcrumb__item" aria-current="page">Checkout</span>
+        </nav>
+
+        <div class="page-header">
+          <h1 class="page-header__title">Checkout</h1>
+          <p class="page-header__subtitle">Review your order and enter delivery details.</p>
+        </div>
+
+        <div class="page-placeholder" data-checkout-empty hidden>
+          <span class="page-placeholder__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+          </span>
+          <h2 class="page-placeholder__title">Your cart is empty</h2>
+          <p class="page-placeholder__text">
+            Add items to your cart before heading to checkout.
+          </p>
+          <a class="btn btn--primary" href="products.html">Start shopping</a>
+        </div>
+
+        <form class="checkout-page" data-checkout-page hidden novalidate>
+          <section class="checkout-main" aria-label="Delivery and payment">
+            <fieldset class="checkout-section">
+              <legend class="checkout-section__title">
+                <span class="checkout-section__step">1</span> Contact
+              </legend>
+              <div class="form-group" data-field="email">
+                <label class="form-label" for="checkout-email">
+                  Email address <span class="form-required">*</span>
+                </label>
+                <input class="form-input" id="checkout-email" type="email"
+                  name="email" autocomplete="email" placeholder="you@example.com" />
+                <p class="form-error" data-error></p>
+              </div>
+            </fieldset>
+
+            <fieldset class="checkout-section">
+              <legend class="checkout-section__title">
+                <span class="checkout-section__step">2</span> Shipping address
+              </legend>
+              <div class="checkout-grid checkout-grid--2">
+                <div class="form-group" data-field="firstName">
+                  <label class="form-label" for="checkout-firstName">
+                    First name <span class="form-required">*</span>
+                  </label>
+                  <input class="form-input" id="checkout-firstName" type="text"
+                    name="firstName" autocomplete="given-name" />
+                  <p class="form-error" data-error></p>
+                </div>
+                <div class="form-group" data-field="lastName">
+                  <label class="form-label" for="checkout-lastName">
+                    Last name <span class="form-required">*</span>
+                  </label>
+                  <input class="form-input" id="checkout-lastName" type="text"
+                    name="lastName" autocomplete="family-name" />
+                  <p class="form-error" data-error></p>
+                </div>
+              </div>
+              <div class="form-group" data-field="address">
+                <label class="form-label" for="checkout-address">
+                  Street address <span class="form-required">*</span>
+                </label>
+                <input class="form-input" id="checkout-address" type="text"
+                  name="address" autocomplete="street-address"
+                  placeholder="123 Main Street" />
+                <p class="form-error" data-error></p>
+              </div>
+              <div class="checkout-grid checkout-grid--2">
+                <div class="form-group" data-field="city">
+                  <label class="form-label" for="checkout-city">
+                    City <span class="form-required">*</span>
+                  </label>
+                  <input class="form-input" id="checkout-city" type="text"
+                    name="city" autocomplete="address-level2" />
+                  <p class="form-error" data-error></p>
+                </div>
+                <div class="form-group" data-field="state">
+                  <label class="form-label" for="checkout-state">State / Province</label>
+                  <input class="form-input" id="checkout-state" type="text"
+                    name="state" autocomplete="address-level1" />
+                  <p class="form-error" data-error></p>
+                </div>
+              </div>
+              <div class="checkout-grid checkout-grid--2">
+                <div class="form-group" data-field="zip">
+                  <label class="form-label" for="checkout-zip">
+                    ZIP / Postal code <span class="form-required">*</span>
+                  </label>
+                  <input class="form-input" id="checkout-zip" type="text"
+                    name="zip" autocomplete="postal-code" />
+                  <p class="form-error" data-error></p>
+                </div>
+                <div class="form-group" data-field="country">
+                  <label class="form-label" for="checkout-country">
+                    Country <span class="form-required">*</span>
+                  </label>
+                  <select class="form-select" id="checkout-country"
+                    name="country" autocomplete="country-name">
+                    <option value="">Select a country</option>
+                    <option value="US">United States</option>
+                    <option value="CA">Canada</option>
+                    <option value="GB">United Kingdom</option>
+                    <option value="DE">Germany</option>
+                    <option value="FR">France</option>
+                    <option value="ES">Spain</option>
+                    <option value="IT">Italy</option>
+                    <option value="NL">Netherlands</option>
+                    <option value="IN">India</option>
+                    <option value="AU">Australia</option>
+                  </select>
+                  <p class="form-error" data-error></p>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset class="checkout-section">
+              <legend class="checkout-section__title">
+                <span class="checkout-section__step">3</span> Payment
+              </legend>
+              <div class="form-group" data-field="paymentMethod">
+                <label class="form-label" for="checkout-payment-method">
+                  Payment method <span class="form-required">*</span>
+                </label>
+                <select class="form-select" id="checkout-payment-method"
+                  name="paymentMethod" data-payment-method>
+                  <option value="CARD">Credit / debit card</option>
+                  <option value="COD">Cash on delivery</option>
+                </select>
+                <p class="form-error" data-error></p>
+              </div>
+
+              <div class="checkout-card-fields" data-card-fields>
+                <div class="form-group" data-field="cardName">
+                  <label class="form-label" for="checkout-card-name">
+                    Name on card <span class="form-required">*</span>
+                  </label>
+                  <input class="form-input" id="checkout-card-name" type="text"
+                    name="cardName" autocomplete="cc-name" placeholder="Full name as shown" />
+                  <p class="form-error" data-error></p>
+                </div>
+                <div class="form-group" data-field="cardNumber">
+                  <label class="form-label" for="checkout-card-number">
+                    Card number <span class="form-required">*</span>
+                  </label>
+                  <input class="form-input" id="checkout-card-number" type="text"
+                    name="cardNumber" inputmode="numeric" autocomplete="cc-number"
+                    placeholder="1234 5678 9012 3456" data-card-number />
+                  <p class="form-error" data-error></p>
+                </div>
+                <div class="checkout-grid checkout-grid--2">
+                  <div class="form-group" data-field="cardExpiry">
+                    <label class="form-label" for="checkout-card-expiry">
+                      Expiry <span class="form-required">*</span>
+                    </label>
+                    <input class="form-input" id="checkout-card-expiry" type="text"
+                      name="cardExpiry" inputmode="numeric" autocomplete="cc-exp"
+                      placeholder="MM/YY" data-card-expiry />
+                    <p class="form-error" data-error></p>
+                  </div>
+                  <div class="form-group" data-field="cardCvc">
+                    <label class="form-label" for="checkout-card-cvc">
+                      CVC <span class="form-required">*</span>
+                    </label>
+                    <input class="form-input" id="checkout-card-cvc" type="text"
+                      name="cardCvc" inputmode="numeric" autocomplete="cc-csc"
+                      placeholder="123" data-card-cvc />
+                    <p class="form-error" data-error></p>
+                  </div>
+                </div>
+              </div>
+
+              <p class="form-hint">
+                This is a demo checkout. Card details are validated and used
+                only to mask the last four digits; nothing is stored or charged.
+              </p>
+            </fieldset>
+          </section>
+
+          <aside class="cart-summary card" aria-label="Order summary">
+            <h2 class="cart-summary__title">Order Summary</h2>
+            <div class="checkout-summary__items" data-summary-items></div>
+            <div class="cart-summary__rows">
+              <div class="cart-summary__row">
+                <span>Subtotal</span>
+                <strong data-summary-subtotal></strong>
+              </div>
+              <div class="cart-summary__row">
+                <span>Shipping</span>
+                <strong>Free</strong>
+              </div>
+            </div>
+            <div class="cart-summary__total">
+              <span>Total</span>
+              <span data-summary-total></span>
+            </div>
+            <div class="cart-summary__actions">
+              <button class="btn btn--primary btn--lg btn--block" type="submit"
+                data-submit>
+                <span data-submit-spinner class="spinner spinner--sm" hidden></span>
+                Place Order
+              </button>
+              <a class="btn btn--ghost btn--block" href="cart.html">Back to cart</a>
+            </div>
+            <p class="form-hint u-text-center">Free shipping on every order.</p>
+          </aside>
+        </form>
+      </div>
+    </main>
+
+    <div data-component="footer"></div>
+
+    <script type="module" src="../js/app.js"></script>
+    <script type="module" src="../js/pages/checkout.js"></script>
+  </body>
+</html>

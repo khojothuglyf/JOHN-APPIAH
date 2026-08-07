@@ -1,0 +1,108 @@
+/* ============================================================
+   PAGES - SHARED SHELL
+   Shared page scaffolding used by every content page:
+   page header, placeholders (Phase 1 stubs) and dashboards.
+   ============================================================ */
+
+.page-header {
+  padding-block: var(--space-6) var(--space-5);
+}
+
+.page-header__inner {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.page-header__title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-text);
+}
+
+.page-header__subtitle {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  max-width: 60ch;
+}
+
+/* Phase 1 stub content */
+.page-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding-block: var(--space-10);
+  background-color: var(--color-surface);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-8);
+}
+
+.page-placeholder__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-primary-50);
+  color: var(--color-primary-500);
+}
+
+.page-placeholder__icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.page-placeholder__title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.page-placeholder__text {
+  max-width: 52ch;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* Error page (404) */
+.error-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-4);
+  padding-block: var(--space-10);
+  min-height: 60vh;
+}
+
+.error-page__code {
+  font-size: clamp(5rem, 14vw, 9rem);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-500),
+    var(--color-primary-700)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.error-page__title {
+  font-size: var(--font-size-xl);
+  color: var(--color-text);
+}
+
+.error-page__text {
+  max-width: 46ch;
+  color: var(--color-text-muted);
+}

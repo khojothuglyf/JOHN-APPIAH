@@ -1,0 +1,38 @@
+/* ============================================================
+   BREADCRUMB
+   Simple page hierarchy navigation.
+   ============================================================ */
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  padding-block: var(--space-4);
+}
+
+.breadcrumb__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.breadcrumb__item + .breadcrumb__item::before {
+  content: "/";
+  color: var(--color-border-strong);
+}
+
+.breadcrumb__item a {
+  color: var(--color-text-muted);
+}
+
+.breadcrumb__item a:hover {
+  color: var(--color-primary-600);
+}
+
+.breadcrumb__item[aria-current="page"] {
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+}

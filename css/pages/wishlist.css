@@ -1,0 +1,14 @@
+/* ============================================================
+   WISHLIST PAGE
+   Grid of wishlisted product cards with an add-to-cart action.
+   ============================================================ */
+
+.wishlist-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.wishlist-cell .product-card {
+  flex: 1;
+}

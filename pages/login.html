@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign In | Marketplace</title>
+    <meta name="description" content="Sign in to your Marketplace account." />
+    <link rel="icon" href="../images/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/main.css" />
+    <link rel="stylesheet" href="../css/pages/auth.css" />
+  </head>
+  <body>
+    <div data-component="navbar"></div>
+
+    <main id="main" class="auth-page">
+      <div class="container">
+        <div class="auth-card">
+          <a class="auth-back" href="../index.html">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+            Back to home
+          </a>
+
+          <div class="auth-card__brand">
+            <img class="auth-card__logo" src="../images/logo.svg" alt="Marketplace logo" width="52" height="52" />
+            <h1 class="auth-card__title">Welcome back</h1>
+            <p class="auth-card__subtitle">Sign in to continue to Marketplace.</p>
+          </div>
+
+          <div class="alert alert--error auth-alert" data-alert hidden role="alert">
+            <svg class="alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+            <div class="alert__content">
+              <p class="alert__title" data-alert-title></p>
+              <p data-alert-message></p>
+            </div>
+          </div>
+
+          <form class="auth-card__form" id="login-form" novalidate>
+            <div class="form-group" data-field="email">
+              <label class="form-label" for="login-email">
+                Email address <span class="form-required">*</span>
+              </label>
+              <input
+                class="form-input"
+                id="login-email"
+                type="email"
+                name="email"
+                autocomplete="email"
+                placeholder="you@example.com"
+              />
+              <p class="form-error"></p>
+            </div>
+
+            <div class="form-group" data-field="password">
+              <label class="form-label" for="login-password">
+                Password <span class="form-required">*</span>
+              </label>
+              <div class="password-field">
+                <input
+                  class="form-input"
+                  id="login-password"
+                  type="password"
+                  name="password"
+                  autocomplete="current-password"
+                  placeholder="Your password"
+                  data-password-input
+                />
+                <button class="password-toggle" type="button" data-password-toggle aria-label="Show password">
+                  <span data-eye-open>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </span>
+                  <span data-eye-closed hidden>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.5 13.5 0 0 0 2 11s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/><path d="M10.58 10.58a2 2 0 0 0 2.83 2.83"/></svg>
+                  </span>
+                </button>
+              </div>
+              <p class="form-error"></p>
+              <a class="btn-link u-mt-2" href="forgot-password.html">Forgot password?</a>
+            </div>
+
+            <button class="btn btn--primary btn--block btn--lg" type="submit" data-submit>
+              <span class="btn__label">Sign In</span>
+              <span class="spinner spinner--sm spinner--white" data-submit-spinner hidden></span>
+            </button>
+          </form>
+
+          <div class="auth-divider">New to Marketplace?</div>
+          <a class="btn btn--outline btn--block" href="register.html">Create an Account</a>
+        </div>
+      </div>
+    </main>
+
+    <div data-component="footer"></div>
+
+    <script type="module" src="../js/app.js"></script>
+    <script type="module" src="../js/pages/login.js"></script>
+  </body>
+</html>

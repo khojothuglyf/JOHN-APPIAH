@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page Not Found | Marketplace</title>
+    <meta name="description" content="The page you are looking for could not be found." />
+    <link rel="icon" href="../images/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/main.css" />
+  </head>
+  <body>
+    <div data-component="navbar"></div>
+
+    <main id="main">
+      <div class="container">
+        <div class="error-page">
+          <p class="error-page__code" aria-hidden="true">404</p>
+          <h1 class="error-page__title">Page not found</h1>
+          <p class="error-page__text">
+            The page you are looking for was moved, removed or never existed.
+            Let's get you back to shopping.
+          </p>
+          <div class="u-flex u-gap-3 u-flex-wrap u-justify-center">
+            <a class="btn btn--primary" href="../index.html">Back to Home</a>
+            <a class="btn btn--outline" href="products.html">Browse Products</a>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div data-component="footer"></div>
+
+    <script type="module" src="../js/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,56 @@
+/* ============================================================
+   BACK TO TOP
+   Floating button that appears after scrolling and scrolls back
+   to the top. Injected by js/components/backToTop.js.
+   ============================================================ */
+
+.back-to-top {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: var(--z-sticky);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-primary-500);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity var(--transition-normal),
+    transform var(--transition-normal), visibility var(--transition-normal),
+    background-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.back-to-top:hover {
+  background-color: var(--color-primary-600);
+  box-shadow: var(--shadow-lg);
+}
+
+.back-to-top:active {
+  transform: translateY(0) scale(0.94);
+}
+
+.back-to-top.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.back-to-top svg {
+  width: 20px;
+  height: 20px;
+}
+
+@media (max-width: 575.98px) {
+  .back-to-top {
+    right: var(--space-3);
+    bottom: var(--space-3);
+    width: 40px;
+    height: 40px;
+  }
+}

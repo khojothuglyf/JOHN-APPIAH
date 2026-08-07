@@ -1,0 +1,136 @@
+<header class="site-header" id="site-header">
+  <!-- Top utility bar -->
+  <div class="navbar-top">
+    <div class="container navbar-top__inner">
+      <p class="navbar-top__left">Free delivery on orders over $50</p>
+      <nav class="navbar-top__right" aria-label="Utility links">
+        <a class="navbar-top__link" href="pages/orders.html" data-nav-link>Track Order</a>
+        <a class="navbar-top__link" href="pages/about.html" data-nav-link>About</a>
+        <a class="navbar-top__link" href="pages/contact.html" data-nav-link>Help Center</a>
+        <a class="navbar-top__link navbar-top__link--sell" href="pages/seller-dashboard.html">Become a Seller</a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Main bar -->
+  <div class="navbar-main">
+    <div class="container navbar-main__inner">
+      <button
+        class="navbar-toggle"
+        type="button"
+        data-navbar-toggle
+        aria-label="Open menu"
+        aria-expanded="false"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+
+      <a class="navbar-brand" href="index.html" aria-label="Marketplace home">
+        <img
+          class="navbar-brand__logo"
+          src="images/logo.svg"
+          alt=""
+          width="34"
+          height="34"
+        />
+        <span class="navbar-brand__name">Marketplace</span>
+      </a>
+
+      <form class="navbar-search" role="search" data-search-form>
+        <div class="searchbar">
+          <label class="u-visually-hidden" for="search-category">Search category</label>
+          <select class="searchbar__select" id="search-category" data-search-category>
+            <option value="">All Categories</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Fashion">Fashion</option>
+            <option value="Home & Living">Home &amp; Living</option>
+            <option value="Beauty & Health">Beauty &amp; Health</option>
+            <option value="Sports & Outdoors">Sports &amp; Outdoors</option>
+            <option value="Toys & Games">Toys &amp; Games</option>
+            <option value="Books">Books</option>
+          </select>
+          <label class="u-visually-hidden" for="search-input">Search products</label>
+          <input
+            class="searchbar__input"
+            id="search-input"
+            type="search"
+            name="q"
+            placeholder="Search products, brands and more"
+            data-search-input
+            autocomplete="off"
+          />
+          <button class="searchbar__button" type="submit" aria-label="Search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <span>Search</span>
+          </button>
+        </div>
+      </form>
+
+      <div class="navbar-actions">
+        <div class="navbar-account" data-navbar-auth></div>
+
+        <a class="icon-button icon-button--account" href="pages/wishlist.html" aria-label="Wishlist" title="Wishlist" data-nav-link>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <span class="badge-count" data-wishlist-count hidden>0</span>
+        </a>
+
+        <a class="icon-button icon-button--account" href="pages/cart.html" aria-label="Shopping cart" title="Shopping cart" data-nav-link>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+          <span class="badge-count" data-cart-count hidden>0</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category bar -->
+  <nav class="navbar-categories" aria-label="Shop by category">
+    <div class="container navbar-categories__inner">
+      <a class="navbar-categories__link" href="pages/products.html" data-nav-link>All Products</a>
+      <a class="navbar-categories__link" href="pages/products.html?category=Electronics" data-nav-link>Electronics</a>
+      <a class="navbar-categories__link" href="pages/products.html?category=Fashion" data-nav-link>Fashion</a>
+      <a class="navbar-categories__link" href="pages/products.html?category=Home%20%26%20Living" data-nav-link>Home &amp; Living</a>
+      <a class="navbar-categories__link" href="pages/products.html?category=Beauty%20%26%20Health" data-nav-link>Beauty &amp; Health</a>
+      <a class="navbar-categories__link" href="pages/products.html?category=Sports%20%26%20Outdoors" data-nav-link>Sports &amp; Outdoors</a>
+      <a class="navbar-categories__link" href="pages/products.html?category=Toys%20%26%20Games" data-nav-link>Toys &amp; Games</a>
+      <a class="navbar-categories__link" href="pages/products.html?category=Books" data-nav-link>Books</a>
+      <a class="navbar-categories__link navbar-categories__link--deals" href="pages/products.html?deals=true" data-nav-link>Deals</a>
+    </div>
+  </nav>
+</header>
+
+<!-- Mobile navigation drawer -->
+<aside class="drawer" data-drawer aria-hidden="true">
+  <div class="drawer__backdrop" data-drawer-close></div>
+  <div class="drawer__panel" role="dialog" aria-modal="true" aria-label="Navigation menu">
+    <div class="drawer__header">
+      <a class="navbar-brand" href="index.html" aria-label="Marketplace home">
+        <img class="navbar-brand__logo" src="images/logo.svg" alt="" width="34" height="34" />
+        <span class="navbar-brand__name">Marketplace</span>
+      </a>
+      <button class="icon-button" type="button" data-drawer-close aria-label="Close menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <nav class="drawer__body" aria-label="Mobile navigation">
+      <p class="drawer__section-title">Shop</p>
+      <a class="drawer__link" href="pages/products.html" data-drawer-close data-nav-link>All Products</a>
+      <a class="drawer__link" href="pages/categories.html" data-drawer-close data-nav-link>Categories</a>
+      <a class="drawer__link" href="pages/products.html?deals=true" data-drawer-close>Deals</a>
+
+      <p class="drawer__section-title">Account</p>
+      <a class="drawer__link" href="pages/profile.html" data-drawer-close data-nav-link>My Profile</a>
+      <a class="drawer__link" href="pages/orders.html" data-drawer-close data-nav-link>My Orders</a>
+      <a class="drawer__link" href="pages/wishlist.html" data-drawer-close data-nav-link>Wishlist</a>
+      <a class="drawer__link" href="pages/cart.html" data-drawer-close data-nav-link>Cart</a>
+      <a class="drawer__link" href="pages/seller-dashboard.html" data-drawer-close>Become a Seller</a>
+
+      <p class="drawer__section-title">Support</p>
+      <a class="drawer__link" href="pages/about.html" data-drawer-close data-nav-link>About</a>
+      <a class="drawer__link" href="pages/contact.html" data-drawer-close data-nav-link>Contact Us</a>
+    </nav>
+    <div class="drawer__footer">
+      <a class="btn btn--primary btn--block" href="pages/login.html">Sign In</a>
+      <a class="btn btn--outline btn--block" href="pages/register.html">Create Account</a>
+    </div>
+  </div>
+</aside>
