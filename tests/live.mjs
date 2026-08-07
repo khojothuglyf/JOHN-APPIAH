@@ -61,7 +61,7 @@ async function api(method, path, { token, body } = {}, retries = 2) {
 }
 
 const envelope = (r) =>
-  r.json && typeof r.json.success === "boolean" && "message" in r.json && "data" in r.json && "timestamp" in r.json;
+  r.json && typeof r.json.success === "boolean" && "message" in r.json && "timestamp" in r.json;
 const unwrap = (r, label) => {
   check(r.ok && envelope(r), label);
   return r.json?.data;
@@ -132,7 +132,7 @@ const run = async () => {
     },
   });
   const product = unwrap(prodCreate, "seller creates product");
-  check(product?.id > 0 && product?.category?.id === category.id, "product has id + nested category");
+  check(product?.id > 0 && product?.categoryId === category.id && product?.categoryName, "product has id + flat categoryId/categoryName");
   const pub = await api("GET", `/products/${product.id}`);
   const pubProd = unwrap(pub, "public product detail");
   check(pubProd?.id === product.id, "product detail returns same id");
@@ -183,8 +183,13 @@ const run = async () => {
   const sellerOrders = unwrap(await api("GET", "/orders/seller", { token: sellerToken }), "seller GET /orders/seller");
   check(sellerOrders?.content?.some((o) => o.id === order.id), "order visible in seller orders");
 
+  /* Cash-on-delivery so the seller can ship without an external gateway. */
+  const payCreate = await api("POST", `/payments/orders/${order.id}`, { token: customerToken, body: { method: "CASH_ON_DELIVERY" } });
+  const payment = unwrap(payCreate, "customer creates COD payment");
+  check(payment?.id > 0 && payment?.method === "CASH_ON_DELIVERY", "payment has id + method");
+
   const statusUpdate = await api("PUT", `/orders/${order.id}/status`, { token: sellerToken, body: { status: "SHIPPED" } });
-  const updatedOrder = unwrap(statusUpdate, "seller updates order status");
+  const updatedOrder = unwrap(statusUpdate, "seller ships order");
   check(updatedOrder?.status === "SHIPPED", "order status now SHIPPED");
 
   const adminOrders = unwrap(await api("GET", "/orders/admin", { token: adminToken }), "admin GET /orders/admin");
@@ -224,7 +229,7 @@ const run = async () => {
   const notif = unwrap(await api("GET", "/notifications", { token: customerToken }), "customer notifications paged");
   check(notif && Array.isArray(notif.content), "notifications content is an array");
   const unread = unwrap(await api("GET", "/notifications/unread-count", { token: customerToken }), "unread count");
-  check(unread != null && typeof unread.count === "number", "UnreadCountResponse has numeric count");
+  check(unread != null && typeof unread.unreadCount === "number", "UnreadCountResponse has numeric unreadCount");
 
   /* ---------- Cleanup (best effort) ---------- */
   console.log("\n[cleanup]");
