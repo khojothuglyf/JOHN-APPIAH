@@ -6,11 +6,14 @@
    Phase 6+ swaps the internals with the backend wishlist API
    while keeping the same surface.
 
-   Backend contract (planned - no wishlist endpoints in the backend
-   yet; keep the local store until they land):
-   - GET    /api/v1/wishlist                -> [ Product ]
-   - POST   /api/v1/wishlist/items/{productId} -> 204
-   - DELETE /api/v1/wishlist/items/{productId} -> 204
+   Backend contract (verified against WishlistController):
+   - GET    /api/v1/wishlist
+     RESPONSE: ApiResponse<PagedResponse<WishlistItemResponse>>
+     WishlistItemResponse: { id, productId, productName, price,
+       imageUrl, sellerName, averageRating, reviewCount, addedAt }
+   - POST   /api/v1/wishlist/{productId} -> ApiResponse<WishlistItemResponse>
+   - DELETE /api/v1/wishlist/{productId} -> ApiResponse<Void>
+   - GET    /api/v1/wishlist/check/{productId} -> ApiResponse<Boolean>
    ============================================================ */
 
 import { storage } from "../utils/storage.js";

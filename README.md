@@ -4,10 +4,10 @@ A professional, responsive e-commerce web application. This repository contains
 **only the frontend** (HTML5, CSS3, ES6+ JavaScript). The backend is a separate
 Spring Boot (Java) REST API service.
 
-> **Current status:** Phases 1-12 (foundation, authentication, live homepage,
+> **Current status:** Phases 1-13 (foundation, authentication, live homepage,
 > product pages, shopping cart, wishlist, checkout + orders, seller dashboard,
-> admin dashboard, user profile, animations & polish, performance optimisation)
-> are complete. Phase 13 (testing & QA) is next. Business features are added
+> admin dashboard, user profile, animations & polish, performance optimisation,
+> testing & QA) are complete. Business features are added
 > phase by phase. See [Roadmap](#roadmap).
 
 ---
@@ -199,6 +199,44 @@ The navbar account menu and dashboard links adapt to the signed-in role:
 
 ---
 
+## Testing (Phase 13)
+
+No build tooling or framework is required - the suites are plain Node ESM scripts.
+
+```bash
+# Reference integrity + CSS class coverage + shell structure (no deps)
+npm run test:static
+
+# Service layer smoke tests with a mocked browser/fetch environment
+npm run test:services
+
+# Everything above
+npm test
+
+# Live contract alignment against the running Spring Boot backend
+# (auto-skips with "SKIPPED" if the backend is not reachable)
+npm run test:live        # expects http://localhost:8080/api/v1
+BASE_URL=http://localhost:8081 npm run test:live
+```
+
+What each suite guards:
+
+- **`tests/static.test.mjs`** - every HTML href/src resolves, every JS import
+  resolves, all pages render the shared navbar/footer/bootstrapping shell, and
+  every CSS class used in static markup has a matching rule (220 classes).
+- **`tests/services.test.mjs`** - loads the real service modules in Node and
+  verifies response-envelope unwrapping (`ApiResponse { success, message, data,
+  timestamp }`), field mapping (`accessToken -> token`, `categoryId ->
+  category.id`, `roleName` on register), Spring paging/sort parameters, order
+  and product status enums vs the backend, and the local fallbacks for cart,
+  wishlist, orders, seller, admin and profile.
+- **`tests/live.mjs`** - runs a full journey against a real backend: admin
+  login, seller/customer registration, category + product creation, wishlist
+  add/check/remove, cart add/update, checkout, seller order status update,
+  seller/admin analytics, authorization guards (401/403) and notifications.
+
+---
+
 ## Roadmap
 
 | Phase | Scope | Status |
@@ -215,7 +253,7 @@ The navbar account menu and dashboard links adapt to the signed-in role:
 | 10 | User profile | ✅ Done |
 | 11 | Animations & polish | ✅ Done |
 | 12 | Performance optimisation | ✅ Done |
-| 13 | Testing & QA | ⏳ Next |
+| 13 | Testing & QA | ✅ Done |
 
 ---
 

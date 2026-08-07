@@ -71,10 +71,10 @@ export const API_ENDPOINTS = {
     clear: "/cart",
   },
   wishlist: {
-    // planned: no backend endpoints yet
     get: "/wishlist",
-    addItem: "/wishlist/items/{productId}",
-    removeItem: "/wishlist/items/{productId}",
+    addItem: "/wishlist/{productId}",
+    removeItem: "/wishlist/{productId}",
+    check: "/wishlist/check/{productId}",
   },
   orders: {
     list: "/orders",
@@ -93,19 +93,21 @@ export const API_ENDPOINTS = {
   seller: {
     orders: "/orders/seller",
     updateOrderStatus: "/orders/{id}/status",
-    // planned: aggregate endpoints not in the backend yet
-    dashboard: "/seller/dashboard",
-    stats: "/seller/stats",
+    // analytics family: /seller/analytics/summary, /top-products,
+    // /sales-by-category, /revenue-timeline
+    analytics: "/seller/analytics",
   },
   admin: {
     categories: "/categories",
     createCategory: "/categories",
+    // analytics family: /admin/analytics/summary, /top-products,
+    // /sales-by-category, /revenue-timeline
+    analytics: "/admin/analytics",
     // planned: no backend endpoints yet
     users: "/admin/users",
     updateUserRole: "/admin/users/{id}/role",
     products: "/admin/products",
     updateProductStatus: "/admin/products/{id}/status",
-    stats: "/admin/stats",
   },
   contact: {
     // planned: no backend endpoints yet
