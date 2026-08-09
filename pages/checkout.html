@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Checkout | TradeSphere</title>
     <meta name="description" content="Complete your purchase securely on TradeSphere." />
-    <link rel="icon" href="../images/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="../images/favicon.svg?v=ts-2" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -20,7 +20,7 @@
     <meta name="theme-color" content="#2f6fed" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="application-name" content="TradeSphere" />
-    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=ts-2" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="TradeSphere" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -118,7 +118,7 @@
               <div class="checkout-grid checkout-grid--2">
                 <div class="form-group" data-field="zip">
                   <label class="form-label" for="checkout-zip">
-                    ZIP / Postal code <span class="form-required">*</span>
+                    ZIP / Postal code <span class="optional">(optional)</span>
                   </label>
                   <input class="form-input" id="checkout-zip" type="text"
                     name="zip" autocomplete="postal-code" />
@@ -141,6 +141,8 @@
                     <option value="NL">Netherlands</option>
                     <option value="IN">India</option>
                     <option value="AU">Australia</option>
+                    <option value="GH">Ghana</option>
+                    <option value="NG">Nigeria</option>
                   </select>
                   <p class="form-error" data-error></p>
                 </div>

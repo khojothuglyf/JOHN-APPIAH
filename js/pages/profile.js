@@ -26,13 +26,13 @@ import {
 import { showToast } from "../components/toast.js";
 
 const ROLE_LABELS = {
-  CUSTOMER: "Customer",
+  BUYER: "Buyer",
   SELLER: "Seller",
   ADMIN: "Administrator",
 };
 
 const ROLE_BADGES = {
-  CUSTOMER: "badge--info",
+  BUYER: "badge--info",
   SELLER: "badge--warning",
   ADMIN: "badge--danger",
 };
@@ -170,6 +170,6 @@ function renderHeader(profile) {
   const badge = $("[data-profile-role]");
   if (badge) {
     badge.className = `badge ${ROLE_BADGES[role] || "badge--primary"} profile-header__role`;
-    badge.textContent = ROLE_LABELS[role] || role || "Customer";
+    badge.textContent = ROLE_LABELS[role] || role || "Buyer";
   }
 }

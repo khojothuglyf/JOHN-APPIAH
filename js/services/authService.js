@@ -16,8 +16,11 @@
      no access token. register() then resolves { token: null, user }
      and the page shows a "check your email" state instead of
      signing in.
-   - The very first registered user becomes the ADMIN automatically
-     (supabase/schema.sql trigger).
+   - Every new account is created with the role chosen at signup
+     (BUYER by default, or SELLER when requested_role is 'seller').
+     There is no automatic admin assignment; an account is
+     promoted to ADMIN only by running supabase/promote-admin.sql
+     manually.
    ============================================================ */
 
 import { ApiError } from "./api.js";
@@ -29,7 +32,7 @@ import { STORAGE_KEYS, USER_ROLES } from "../config.js";
 function normalizeRole(role) {
   return Object.prototype.hasOwnProperty.call(USER_ROLES, role)
     ? role
-    : USER_ROLES.CUSTOMER;
+    : USER_ROLES.BUYER;
 }
 
 /**
@@ -47,7 +50,7 @@ function userFromAuth(authUser = {}, profile = null) {
       profile?.last_name || meta.last_name || authUser.lastName || "",
     role: profile?.role
       ? normalizeRole(profile.role)
-      : USER_ROLES.CUSTOMER,
+      : USER_ROLES.BUYER,
     createdAt: profile?.created_at ?? authUser.created_at ?? null,
   };
 }
@@ -80,9 +83,18 @@ export async function login({ email, password }) {
   };
 }
 
+/** Only the literal value "seller" may request a SELLER account; every
+ *  other value - including "admin" or a tampered payload - is coerced to
+ *  the BUYER account type. The Supabase trigger sanitizes this again. */
+function sanitizeRequestedRole(value) {
+  return value === "seller" ? "seller" : "buyer";
+}
+
 /**
  * Create a new account. Resolves to { token, refreshToken, user }.
  * token is null when Supabase requires email confirmation first.
+ * payload.requestedRole is "buyer" (default) or "seller"; "admin" is
+ * always coerced to "buyer" and never sent as an admin request.
  */
 export async function register(payload) {
   const body = await supabaseAuth.signUp({
@@ -90,6 +102,7 @@ export async function register(payload) {
     password: payload.password,
     firstName: payload.firstName,
     lastName: payload.lastName,
+    requestedRole: sanitizeRequestedRole(payload.requestedRole),
   });
   const token = body.access_token ?? null;
   const authUser = body.user ?? body ?? null;
@@ -118,7 +131,7 @@ export function isAuthenticated() {
   return Boolean(getCurrentUser());
 }
 
-/** Role of the signed-in user (CUSTOMER | SELLER | ADMIN | null). */
+/** Role of the signed-in user (BUYER | SELLER | ADMIN | null). */
 export function getRole() {
   const user = getCurrentUser();
   return user?.role ? normalizeRole(user.role) : null;

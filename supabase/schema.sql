@@ -15,11 +15,20 @@ create table if not exists public.profiles (
   first_name text not null default '',
   last_name text not null default '',
   email text not null,
-  role text not null default 'CUSTOMER'
-    check (role in ('CUSTOMER', 'SELLER', 'ADMIN')),
+  role text not null default 'BUYER'
+    check (role in ('BUYER', 'SELLER', 'ADMIN')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+/* Legacy migration: rename the old buyer role CUSTOMER -> BUYER and
+   re-apply the check constraint under an explicit, idempotent name so
+   re-running this file is safe on projects that used an earlier version. */
+update public.profiles set role = 'BUYER' where role = 'CUSTOMER';
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles
+  add constraint profiles_role_check
+  check (role in ('BUYER', 'SELLER', 'ADMIN'));
 
 create table if not exists public.categories (
   id bigserial primary key,
@@ -96,20 +105,34 @@ create trigger cart_items_set_updated_at
   before update on public.cart_items
   for each row execute procedure public.set_updated_at();
 
--- ---------- Auth triggers: auto profile + first-user-admin ----------
+-- ---------- Auth trigger: auto profile creation (no auto-admin) ----------
 
+/* Strictly sanitize the account type requested at signup.
+   Only the literal value 'seller' (case-insensitive) may create a SELLER
+   profile; every other value - including 'admin', typos, or no value at
+   all - always resolves to the default BUYER role. A user can therefore
+   never request an ADMIN profile. */
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer set search_path = public
 as $$
+declare
+  v_requested text := lower(btrim(coalesce(new.raw_user_meta_data ->> 'requested_role', '')));
+  v_role text;
 begin
-  insert into public.profiles (id, first_name, last_name, email)
+  v_role := case
+    when v_requested = 'seller' then 'SELLER'
+    else 'BUYER'
+  end;
+
+  insert into public.profiles (id, first_name, last_name, email, role)
   values (
     new.id,
     coalesce(new.raw_user_meta_data ->> 'first_name', ''),
     coalesce(new.raw_user_meta_data ->> 'last_name', ''),
-    new.email
+    new.email,
+    v_role
   )
   on conflict (id) do nothing;
   return new;
@@ -121,24 +144,13 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
-/* The very first registered profile becomes the platform ADMIN. */
-create or replace function public.assign_first_user_admin()
-returns trigger
-language plpgsql
-security definer set search_path = public
-as $$
-begin
-  if (select count(*) from public.profiles) = 1 then
-    update public.profiles set role = 'ADMIN' where id = new.id;
-  end if;
-  return new;
-end;
-$$;
-
+/* No automatic admin assignment. Every new profile keeps the default
+   BUYER role; ADMIN is granted only by the manual script
+   supabase/promote-admin.sql. The drop statements below also remove the
+   old first-user-admin trigger/function on projects that ran an earlier
+   version of this file, so re-running it stays safe. */
 drop trigger if exists on_profile_first_admin on public.profiles;
-create trigger on_profile_first_admin
-  after insert on public.profiles
-  for each row execute procedure public.assign_first_user_admin();
+drop function if exists public.assign_first_user_admin();
 
 -- ---------- Row Level Security ----------
 
@@ -166,6 +178,13 @@ create policy profiles_select_own on public.profiles
 drop policy if exists profiles_update_own on public.profiles;
 create policy profiles_update_own on public.profiles
   for update using (auth.uid() = id) with check (auth.uid() = id);
+
+/* Role immutability: the anon/authenticated roles (everything the browser
+   anon key can reach) can never write the role column. The role is chosen
+   once at signup by handle_new_user and can only be changed by an existing
+   admin through the protected workflow / manual SQL (promote-admin.sql),
+   which run as the table owner. */
+revoke update (role) on table public.profiles from anon, authenticated;
 
 /* Categories: everyone can read; only admins write. */
 drop policy if exists categories_read_all on public.categories;

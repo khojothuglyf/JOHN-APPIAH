@@ -112,14 +112,60 @@ See `supabase/schema.sql` for the full schema.
    copy is the local fallback; Netlify overrides it at build time).
 5. **Email confirmations:** if "Enable email confirmations" is on
    (Authentication → Providers → Email), new registrations land on a
-   "check your inbox" state until the user confirms. The very **first**
-   confirmed user is automatically promoted to **ADMIN**
-   (`assign_first_user_admin` trigger).
+   "check your inbox" state until the user confirms. **No account is
+   ever auto-promoted to ADMIN** — registration asks for an account type
+   (Buyer by default, or Seller) and the profile is created with the
+   matching `BUYER` or `SELLER` role.
 
 > **Auth note:** the app reads the user role from `public.profiles`, which is
-> created automatically on signup (`handle_new_user` trigger). If you create
-> the first admin user before running the schema, run
-> `update public.profiles set role = 'ADMIN' where id = '<uuid>'` afterwards.
+> created automatically on signup (`handle_new_user` trigger). The `role`
+> column cannot be changed by the account owner — the anon/authenticated
+> roles have no update grant on it. To make an account an admin, run
+> `supabase/promote-admin.sql` manually in the SQL Editor **after** that
+> account exists — see the Pre-deployment checklist below.
+
+---
+
+## Pre-deployment checklist
+
+Complete these steps **in the Supabase Dashboard** before pointing real
+traffic at the site (none of them can be done from this repo):
+
+1. **Verify Row Level Security is enabled and policies are applied.** Open
+   SQL Editor and run:
+
+   ```sql
+   select relname, relrowsecurity
+   from pg_class
+   where relname in ('profiles', 'categories', 'products', 'cart_items', 'wishlist_items')
+   order by relname;
+   ```
+
+   Every row must show `t` for `relrowsecurity`. Then confirm the policies
+   exist:
+
+   ```sql
+   select tablename, policyname
+   from pg_policies
+   where schemaname = 'public'
+   order by tablename, policyname;
+   ```
+
+   If RLS is off or policies are missing, re-run `supabase/schema.sql` in the
+   SQL Editor and check it completes without errors.
+
+2. **Enable email confirmation:** Authentication → Providers → Email →
+   "Enable email confirmations" = ON, so new users must confirm their
+   address before signing in (blocks account squatting / spam signups).
+
+3. **Enable CAPTCHA (if available):** Authentication → Security → bot
+   protection / CAPTCHA — turn it on for sign-up and sign-in to slow down
+   brute-force and bulk registration.
+
+4. **Promote your admin account once.** Create/sign in with your admin email
+   (`khojothuglyf1@gmail.com`) so its profile exists, then run
+   `supabase/promote-admin.sql` in the SQL Editor. No account is admin
+   automatically, so only promote the exact account you control.
 
 ---
 
@@ -326,8 +372,10 @@ The Supabase URL and anon key come from `SUPABASE_URL` / `SUPABASE_ANON_KEY`
 - **Tables:** `profiles`, `categories`, `products`, `cart_items`,
   `wishlist_items` (with a seeded catalog - 7 categories, 6 products, one
   `INACTIVE`).
-- **Auth triggers:** `handle_new_user` (auto-creates a profile on signup) and
-  `assign_first_user_admin` (the first profile becomes `ADMIN`).
+- **Auth triggers:** `handle_new_user` (auto-creates a profile on signup;
+  the `requested_role` metadata is strictly sanitized — only `seller` maps
+  to `SELLER`, everything else including `admin` or a missing value maps to
+  the default `BUYER` role).
 - **Row Level Security:** public reads for categories/products, owner-only
   access for profiles/cart/wishlist, admin-only writes for categories/products.
 - **updated_at** triggers on every mutable table.
@@ -354,11 +402,19 @@ still-local services and validated by the test suite.
 
 ## Roles
 
+Registration asks for an account type — **Buyer** (default) or **Seller** —
+and stores the matching `BUYER` / `SELLER` role. No Admin signup option
+exists, and a `requested_role` of `admin` is always ignored. Once created,
+the role is **immutable** for the account owner: the `anon`/`authenticated`
+roles have no update grant on `public.profiles.role`, so only an existing
+admin (through `supabase/promote-admin.sql` or direct owner SQL) can change
+it.
+
 The navbar account menu and dashboard links adapt to the signed-in role:
 
 | Role | Extra navbar actions |
 | ---- | -------------------- |
-| CUSTOMER | Orders, Profile, Wishlist |
+| BUYER | Orders, Profile, Wishlist |
 | SELLER | Seller Dashboard, Orders, Profile |
 | ADMIN | Admin Dashboard, Orders, Profile |
 
@@ -427,7 +483,7 @@ What each suite guards:
 | 12.6 | Backend integration: cart synced to live API (merge on POST, canonical cartItemIds from server responses, rollback on failure) | ✅ Done |
 | 13 | Testing & QA | ✅ Done |
 | 14 | Amazon-style advanced search & filters (price range slider, rating, availability, seller facet, discount depth, active-filter chips) + store-ready PWA manifest (shortcuts, launch handler) | ✅ Done |
-| 15 | Supabase integration (storefront-first: Auth, catalog, cart + wishlist; zero-dep REST client, RLS, auto profile + first-user-admin triggers) | ✅ Done |
+| 15 | Supabase integration (storefront-first: Auth, catalog, cart + wishlist; zero-dep REST client, RLS, auto profile creation, no auto-admin) | ✅ Done |
 
 ---
 

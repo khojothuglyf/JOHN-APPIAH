@@ -152,7 +152,7 @@ export const STORAGE_KEYS = {
 
 /** Application user roles returned by the backend. */
 export const USER_ROLES = {
-  CUSTOMER: "CUSTOMER",
+  BUYER: "BUYER",
   SELLER: "SELLER",
   ADMIN: "ADMIN",
 };

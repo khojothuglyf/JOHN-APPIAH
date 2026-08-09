@@ -2,10 +2,11 @@
    REGISTER PAGE SCRIPT
    Validates the form, calls authService.register and sends the
    new user to their role's landing page. Already-authenticated
-   visitors are sent home.
+   visitors are sent home. Users pick an account type (Buyer by
+   default or Seller); no Admin signup option exists.
    ============================================================ */
 
-import { $, pageUrl } from "../utils/dom.js";
+import { $, getQueryParam, pageUrl } from "../utils/dom.js";
 import { validators, validate } from "../utils/validators.js";
 import {
   readFormData,
@@ -33,6 +34,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   initPasswordToggles(form);
+
+  // Preselect the account type when arriving from the login page's
+  // "Create a Buyer/Seller account" links (?accountType=buyer|seller).
+  // The selector stays visible and editable; only a literal "seller"
+  // switches away from the Buyer default, so a tampered value (e.g.
+  // "admin") can never preselect anything else.
+  if (getQueryParam("accountType") === "seller") {
+    const sellerRadio = form.querySelector(
+      'input[name="accountType"][value="seller"]'
+    );
+    if (sellerRadio) sellerRadio.checked = true;
+  }
 
   const rules = {
     firstName: [validators.required, validators.minLength(2)],
@@ -64,11 +77,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setSubmitState(form, true);
     try {
+      // Account type: Buyer (default) or Seller. Anything else - including
+      // a tampered "admin" value - is coerced to Buyer here and again in
+      // authService and the Supabase trigger.
+      const requestedRole = ["buyer", "seller"].includes(values.accountType)
+        ? values.accountType
+        : "buyer";
+
       const { token, user } = await register({
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
         email: values.email.trim(),
         password: values.password,
+        requestedRole,
       });
 
       if (!token) {

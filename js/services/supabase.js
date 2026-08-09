@@ -110,7 +110,7 @@ export function parseContentRange(headers) {
 
 export const supabaseAuth = {
   /** Create an account. Metadata flows into the profiles trigger. */
-  signUp({ email, password, firstName, lastName }) {
+  signUp({ email, password, firstName, lastName, requestedRole }) {
     return supabaseRequest(`${AUTH_PATH}/signup`, {
       method: "POST",
       body: {
@@ -119,6 +119,7 @@ export const supabaseAuth = {
         data: {
           first_name: firstName || "",
           last_name: lastName || "",
+          requested_role: requestedRole === "seller" ? "seller" : "buyer",
         },
       },
     });

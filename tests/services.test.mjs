@@ -63,7 +63,7 @@ const run = async () => {
   const { API_ENDPOINTS, endpointPath, USER_ROLES, STORAGE_KEYS } = config;
   check(endpointPath("/products/{id}", { id: 7 }) === "/products/7", "endpointPath fills {id}");
   check(endpointPath("/products/{id}", {}) === "/products/{id}", "endpointPath leaves missing params");
-  check(USER_ROLES.CUSTOMER === "CUSTOMER" && USER_ROLES.SELLER === "SELLER" && USER_ROLES.ADMIN === "ADMIN", "USER_ROLES match backend roles");
+  check(USER_ROLES.BUYER === "BUYER" && USER_ROLES.SELLER === "SELLER" && USER_ROLES.ADMIN === "ADMIN", "USER_ROLES match backend roles");
   check(STORAGE_KEYS.token === "marketplace.auth.token", "auth token storage key stable");
   check(STORAGE_KEYS.refreshToken === "marketplace.auth.refresh", "refresh token storage key stable");
 
@@ -268,10 +268,20 @@ const run = async () => {
   check(regSession.user?.email === "john@t.com", "register returns the created user");
   const regReq = requests.find((r) => r.url.includes("/auth/v1/signup"));
   check(regReq && regReq.body.includes('"first_name"'), "register sends first_name metadata");
+  check(regReq && regReq.body.includes('"requested_role":"buyer"'), "register defaults requested_role to buyer");
   check(regReq && !regReq.body.includes("roleName"), "register no longer sends roleName");
   check(regReq && !regReq.body.includes('"role"'), "register does not send a bare role key");
 
-  auth.setSession({ token: "TOK-2", user: { firstName: "John", role: "CUSTOMER" } });
+  await auth.register({ firstName: "Evil", lastName: "Admin", email: "evil@t.com", password: "pw", requestedRole: "admin" });
+  const adminReq = requests.filter((r) => r.url.includes("/auth/v1/signup")).pop();
+  check(adminReq && adminReq.body.includes('"requested_role":"buyer"'), "register coerces admin request to buyer");
+  check(adminReq && !adminReq.body.includes('"requested_role":"admin"'), "register never sends an admin role request");
+
+  await auth.register({ firstName: "Sally", lastName: "Seller", email: "sally@t.com", password: "pw", requestedRole: "seller" });
+  const sellerReq = requests.filter((r) => r.url.includes("/auth/v1/signup")).pop();
+  check(sellerReq && sellerReq.body.includes('"requested_role":"seller"'), "register sends seller requested_role");
+
+  auth.setSession({ token: "TOK-2", user: { firstName: "John", role: "BUYER" } });
   auth.logout();
   check(!auth.isAuthenticated(), "logout clears session");
   check(

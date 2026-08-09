@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Create Account | TradeSphere</title>
     <meta name="description" content="Create your free TradeSphere account and start shopping." />
-    <link rel="icon" href="../images/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="../images/favicon.svg?v=ts-2" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -19,7 +19,7 @@
     <meta name="theme-color" content="#2f6fed" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="application-name" content="TradeSphere" />
-    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=ts-2" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="TradeSphere" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -95,6 +95,27 @@
               />
               <p class="form-error"></p>
             </div>
+
+            <fieldset class="form-group form-group--account-type" data-field="accountType">
+              <legend class="form-label">I want to register as</legend>
+              <div class="account-type">
+                <label class="account-type__option">
+                  <input type="radio" name="accountType" value="buyer" checked />
+                  <span class="account-type__copy">
+                    <span class="account-type__label">Buyer</span>
+                    <span class="account-type__desc">Browse and buy products</span>
+                  </span>
+                </label>
+                <label class="account-type__option">
+                  <input type="radio" name="accountType" value="seller" />
+                  <span class="account-type__copy">
+                    <span class="account-type__label">Seller</span>
+                    <span class="account-type__desc">List and sell your products</span>
+                  </span>
+                </label>
+              </div>
+              <p class="form-error"></p>
+            </fieldset>
 
             <div class="form-group" data-field="password">
               <label class="form-label" for="register-password">

@@ -21,6 +21,12 @@
   margin-left: var(--space-1);
 }
 
+.form-label .optional {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
+  margin-left: var(--space-1);
+}
+
 .form-input,
 .form-select,
 .form-textarea {
@@ -108,6 +114,65 @@
   margin-top: 2px;
   accent-color: var(--color-primary-500);
   cursor: pointer;
+}
+
+/* ---- Account type selector (registration) ---- */
+.form-group--account-type {
+  border: 0;
+  padding: 0;
+  margin: 0 0 var(--space-4);
+}
+
+.form-group--account-type .form-label {
+  display: block;
+  margin-bottom: var(--space-2);
+}
+
+.account-type {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.account-type__option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.account-type__option:has(input[type="radio"]:checked) {
+  border-color: var(--color-primary-500);
+  background-color: var(--color-primary-50);
+}
+
+.account-type__option input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  accent-color: var(--color-primary-500);
+  cursor: pointer;
+}
+
+.account-type__copy {
+  display: block;
+}
+
+.account-type__label {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.account-type__desc {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
 }
 
 /* ---- Inline group (e.g. label + input on one row) ---- */

@@ -62,7 +62,7 @@ const SEED_USERS = [
     firstName: "Margaret",
     lastName: "Hamilton",
     email: "margaret@marketplace.dev",
-    role: USER_ROLES.CUSTOMER,
+    role: USER_ROLES.BUYER,
     createdAt: "2026-04-18T16:45:00.000Z",
   },
   {
@@ -70,7 +70,7 @@ const SEED_USERS = [
     firstName: "Katherine",
     lastName: "Johnson",
     email: "katherine@marketplace.dev",
-    role: USER_ROLES.CUSTOMER,
+    role: USER_ROLES.BUYER,
     createdAt: "2026-05-22T08:00:00.000Z",
   },
 ];

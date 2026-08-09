@@ -3,7 +3,7 @@
    Loads components/navbar.html and wires up:
    - mobile drawer (open/close, escape key)
    - search form submission
-   - role-aware account menu (CUSTOMER / SELLER / ADMIN)
+   - role-aware account menu (BUYER / SELLER / ADMIN)
    - live cart + wishlist badges
    - sticky shadow + active link highlighting
    ============================================================ */

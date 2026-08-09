@@ -102,7 +102,7 @@ const run = async () => {
 
   const customerEmail = `phase13-customer-${stamp}@live.test`;
   const customerReg = await api("POST", "/auth/register", {
-    body: { firstName: "Live", lastName: "Customer", email: customerEmail, password: "LiveTest123!", roleName: "CUSTOMER" },
+    body: { firstName: "Live", lastName: "Customer", email: customerEmail, password: "LiveTest123!", roleName: "BUYER" },
   });
   const customerData = unwrap(customerReg, "customer register unwraps AuthResponse");
   const customerToken = customerData.accessToken;
