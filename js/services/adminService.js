@@ -331,6 +331,19 @@ export async function syncCategories() {
 }
 
 /**
+ * Public read of the backend category list.
+ * Backend: GET /api/v1/categories (public). Unlike syncCategories()
+ * this does NOT require an ADMIN session and does NOT touch the
+ * admin cache - it exists so the seller product form can resolve
+ * the Spring Boot category id for a storefront (Supabase) category
+ * by name. The nested response is flattened for the caller.
+ */
+export async function fetchCatalogCategories() {
+  const envelope = await http.get(API_ENDPOINTS.categories.list);
+  return flattenCategories(envelope?.data);
+}
+
+/**
  * Create a category in the backend.
  * Backend: POST /api/v1/categories (ADMIN) with { name, description }.
  * Resolves the mapped backend category (cached). Returns null when

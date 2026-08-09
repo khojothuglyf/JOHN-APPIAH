@@ -46,6 +46,11 @@ import {
 } from "../services/sellerService.js";
 import { showToast } from "../components/toast.js";
 import { getCategories } from "../services/categoryService.js";
+import { fetchCatalogCategories } from "../services/adminService.js";
+import {
+  buildCategoryOptions,
+  findBackendCategoryId,
+} from "../services/categoryMapping.js";
 
 const IMAGE_FALLBACK = pageUrl("images/placeholder.svg");
 
@@ -79,6 +84,11 @@ const page = {
 
 let deleteTargetId = null;
 let dashboardSummary = null;
+
+/** Supabase <-> backend category pairs used by the product form
+ *  (see loadCategoryOptions). Each entry carries the Spring Boot
+ *  category id the backend API requires, never the Supabase id. */
+let categoryOptions = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!isAuthenticated()) {
@@ -393,11 +403,18 @@ async function saveProduct(event) {
 
   const id = $("[data-product-id]", form).value;
   const categorySelect = $("[name='category']", form);
-  const categoryId = categorySelect?.selectedOptions[0]?.dataset?.categoryId;
+  const selectedName = categorySelect?.selectedOptions[0]?.value || "";
+  const backendCategoryId = findBackendCategoryId(categoryOptions, selectedName);
+  if (backendCategoryId == null) {
+    showFieldErrors(form, {
+      category: "Category not available in the backend catalogue yet",
+    });
+    return;
+  }
   const payload = {
     name: values.name.trim(),
     category: values.category,
-    categoryId: categoryId ? Number(categoryId) : null,
+    categoryId: backendCategoryId,
     sku: (values.sku || "").trim(),
     description: values.description.trim(),
     price: Number(values.price),
@@ -445,24 +462,42 @@ const PRODUCT_RULES = {
 
 /* ---- Category options ---- */
 
-/** Populate the category select from the live Supabase categories. */
+/** Populate the category select by mapping the live Supabase
+ *  categories to their Spring Boot counterparts by name. Each option
+ *  carries the BACKEND category id (the only id the Spring Boot API
+ *  accepts) as data-category-id plus the Supabase id as data-supabase-id
+ *  for provenance. A category without a backend match is disabled: it
+ *  is unavailable for backend product creation. */
 async function loadCategoryOptions() {
   const select = page.productForm?.elements.category;
   if (!select) return;
   try {
-    const categories = await getCategories();
-    if (!Array.isArray(categories) || categories.length === 0) return;
+    const [supabaseCategories, backendCategories] = await Promise.all([
+      getCategories(),
+      fetchCatalogCategories(),
+    ]);
+    categoryOptions = buildCategoryOptions(
+      supabaseCategories,
+      backendCategories
+    );
     select.innerHTML = '<option value="">Select a category</option>';
-    categories.forEach((category) => {
+    categoryOptions.forEach((category) => {
       const option = document.createElement("option");
       option.value = category.name;
       option.textContent = category.name;
-      if (category.id != null) option.dataset.categoryId = String(category.id);
+      option.dataset.categoryId =
+        category.backendId != null ? String(category.backendId) : "";
+      option.dataset.supabaseId =
+        category.supabaseId != null ? String(category.supabaseId) : "";
+      if (category.backendId == null) {
+        option.disabled = true;
+        option.title = "Category not available in the backend catalogue yet";
+      }
       select.appendChild(option);
     });
   } catch (error) {
     console.warn(
-      "[seller] could not load live categories, using fallback list:",
+      "[seller] could not load categories for the product form:",
       error?.message || error
     );
   }

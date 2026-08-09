@@ -14,6 +14,7 @@
    - config endpoint registry consistency
    ============================================================ */
 
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -822,6 +823,61 @@ const run = async () => {
   check(Array.isArray(cats) && cats.length === 1 && cats[0].name === "Electronics", "getCategories unwraps data array");
 
   /* ==========================================================
+     [E2] Category mapping (Supabase <-> Spring Boot by name)
+     ========================================================== */
+  section("categoryMapping");
+  const mapping = await import(app("js/services/categoryMapping.js"));
+
+  const SUPABASE_CATS = [
+    { id: 1, name: "Electronics" },
+    { id: 2, name: "Fashion" },
+    { id: 3, name: "Home & Living" },
+  ];
+  const BACKEND_CATS = [
+    { id: 101, name: "electronics" },
+    { id: 102, name: "Home & Living" },
+    { id: 103, name: "Books" },
+  ];
+
+  const mapped = mapping.buildCategoryOptions(SUPABASE_CATS, BACKEND_CATS);
+  check(mapped.length === 3, "every Supabase category yields one option");
+  check(mapped[0].name === "Electronics" && mapped[0].supabaseId === 1 && mapped[0].backendId === 101, "exact name match resolves the backend id");
+  check(mapped[0].backendId === 101 && mapped[0].backendId !== mapped[0].supabaseId, "backendId is the backend id, never the Supabase id");
+  check(mapped[1].name === "Fashion" && mapped[1].backendId === null, "unmatched category keeps backendId null");
+  check(mapped[2].name === "Home & Living" && mapped[2].backendId === 102, "case-insensitive match resolves the backend id");
+
+  const dup = mapping.buildCategoryOptions(
+    [
+      { id: 1, name: "Electronics" },
+      { id: 5, name: "electronics" },
+    ],
+    [
+      { id: 201, name: "Electronics" },
+      { id: 202, name: "ELECTRONICS" },
+    ]
+  );
+  check(dup.length === 1 && dup[0].supabaseId === 1 && dup[0].backendId === 201, "duplicate names collapse to the first entry");
+
+  check(mapping.buildCategoryOptions().length === 0, "empty inputs yield no options");
+  const single = mapping.buildCategoryOptions([{ id: 1, name: "X" }], []);
+  check(single.length === 1 && single[0].backendId === null, "missing backend list leaves backendId null");
+
+  check(mapping.findBackendCategoryId(mapped, "ELECTRONICS") === 101, "findBackendCategoryId matches case-insensitively");
+  check(mapping.findBackendCategoryId(mapped, "Fashion") === null, "findBackendCategoryId returns null for an unmatched name");
+  check(mapping.findBackendCategoryId(mapped, "Nope") === null, "findBackendCategoryId returns null for unknown names");
+  check(mapping.findBackendCategoryId(mapped, "") === null, "findBackendCategoryId rejects blank names");
+  check(mapping.findBackendCategoryId(mapped, "Electronics") !== 1, "findBackendCategoryId never falls back to the Supabase id");
+
+  // Seller page wiring: the dropdown stamps the backend id and the
+  // save flow resolves it through the mapping guard.
+  const sellerSrc = readFileSync(join(ROOT, "js", "pages", "seller-dashboard.js"), "utf8");
+  check(sellerSrc.includes('option.dataset.categoryId =\n        category.backendId') || sellerSrc.includes('option.dataset.categoryId ='), "seller dropdown stamps the backend id on each option");
+  check(sellerSrc.includes("buildCategoryOptions(") && sellerSrc.includes("findBackendCategoryId("), "seller form maps categories by name and resolves the backend id");
+  check(sellerSrc.includes("categoryId: backendCategoryId"), "seller save sends only the mapped backend id");
+  check(sellerSrc.includes("Category not available in the backend catalogue yet"), "seller save blocks unmatched categories with the planned message");
+  check(!sellerSrc.includes("option.dataset.categoryId = String(category.id)"), "seller dropdown never stamps the Supabase id as categoryId");
+
+  /* ==========================================================
      [F] Cart service (local cache + Supabase sync)
      ========================================================== */
   section("cartService");
@@ -1183,6 +1239,28 @@ const run = async () => {
   }
   check(roleGuardError?.status === 403, "non-admin sync rejects 403");
   check(requests.length === before403, "403 is enforced locally without a request");
+
+  // fetchCatalogCategories is a PUBLIC read: no ADMIN required and the
+  // admin category cache is left untouched (the seller form uses it to
+  // resolve backend category ids by name).
+  const publicCatsStart = requests.length;
+  const publicCats = await admin.fetchCatalogCategories();
+  check(Array.isArray(publicCats) && publicCats.length === 3, "fetchCatalogCategories flattens the public GET /categories");
+  check(publicCats[0].name === "Electronics" && publicCats[1].name === "Headphones", "fetchCatalogCategories flattens nested subcategories");
+  check(requests[publicCatsStart]?.method === "GET" && requests[publicCatsStart].url.includes("/api/v1/categories"), "fetchCatalogCategories GETs /categories without admin");
+  check(admin.getCategories().length === 0, "public category read does not touch the admin cache");
+
+  // Category CRUD stays ADMIN-authoritative: a seller is rejected
+  // locally before any request reaches the backend.
+  const sellerCatStart = requests.length;
+  let sellerCatError = null;
+  try {
+    await admin.createCategory("Sneaky");
+  } catch (error) {
+    sellerCatError = error;
+  }
+  check(sellerCatError?.status === 403, "non-admin category creation is rejected 403");
+  check(requests.length === sellerCatStart, "category CRUD 403 is enforced locally without a request");
 
   // Restore the ADMIN session for the sync tests.
   auth.setSession({
