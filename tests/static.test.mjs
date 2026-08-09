@@ -24,10 +24,12 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const isDir = (p) => existsSync(p) && statSync(p).isDirectory();
 
 const allFiles = [];
+const IGNORED_DIRS = new Set(["dist", "node_modules"]);
 function walk(dir, base = dir) {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
     if (entry.startsWith(".")) continue;
+    if (IGNORED_DIRS.has(entry) && isDir(full)) continue;
     if (isDir(full)) walk(full, base);
     else allFiles.push(full);
   }

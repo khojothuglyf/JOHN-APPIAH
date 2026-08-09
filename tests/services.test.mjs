@@ -1,18 +1,17 @@
 /* ============================================================
-   PHASE 13 - SERVICE LAYER SMOKE TESTS
+   PHASE 13 - SERVICE LAYER SMOKE TESTS (Supabase)
    Run: node tests/services.test.mjs
 
    Loads the real frontend service modules in Node with a mocked
    browser environment (window/localStorage/sessionStorage/fetch)
    and verifies:
-   - response envelope unwrapping (ApiResponse { success, message,
-     data, timestamp } -> data)
-   - field mapping (accessToken -> token, categoryName -> category)
-   - request shapes sent to the backend (roleName, not role)
-   - enum alignment with the backend (OrderStatus, ProductStatus)
-   - local fallback behaviour of the still-local services
-     (cart, wishlist, orders, seller, admin, profile)
-   - config endpoint registry consistency with the backend
+   - Supabase Auth contract (login -> access_token, signup metadata,
+     no roleName, email-confirmation token-less signup)
+   - PostgREST contract (Range paging, content-range totals,
+     embedded category/seller names, snake_case -> camelCase mapping)
+   - the local fallback services (cart, wishlist, orders, seller,
+     admin, profile)
+   - config endpoint registry consistency
    ============================================================ */
 
 import { dirname, join } from "node:path";
@@ -58,7 +57,7 @@ const run = async () => {
   const config = await import(app("js/config.js"));
 
   /* ==========================================================
-     [A] Config + endpoint registry vs the real backend
+     [A] Config + endpoint registry
      ========================================================== */
   section("config");
   const { API_ENDPOINTS, endpointPath, USER_ROLES, STORAGE_KEYS } = config;
@@ -66,6 +65,7 @@ const run = async () => {
   check(endpointPath("/products/{id}", {}) === "/products/{id}", "endpointPath leaves missing params");
   check(USER_ROLES.CUSTOMER === "CUSTOMER" && USER_ROLES.SELLER === "SELLER" && USER_ROLES.ADMIN === "ADMIN", "USER_ROLES match backend roles");
   check(STORAGE_KEYS.token === "marketplace.auth.token", "auth token storage key stable");
+  check(STORAGE_KEYS.refreshToken === "marketplace.auth.refresh", "refresh token storage key stable");
 
   const exact = [
     ["auth.login", "/auth/login"],
@@ -98,8 +98,6 @@ const run = async () => {
     check(entry === path, `API_ENDPOINTS.${key} === ${path}`);
   }
 
-  /* Backend endpoints that MUST NOT be advertised as live yet
-     (no matching controller exists). */
   const stillPlanned = ["auth.logout", "auth.me", "users.profile", "users.updateProfile", "users.changePassword", "admin.users", "admin.updateUserRole", "admin.products", "admin.updateProductStatus", "contact.send"];
   for (const key of stillPlanned) {
     const entry = key.split(".").reduce((o, k) => o?.[k], API_ENDPOINTS);
@@ -107,96 +105,243 @@ const run = async () => {
   }
 
   /* ==========================================================
-     [B] Auth service (backend-wired)
+     [B] Supabase mock routes
      ========================================================== */
-  section("authService");
   const requests = [];
-  const wrapped = (data, message = "ok") => ({ success: true, message, data, timestamp: "2026-08-07T00:00:00Z" });
-  const PRODUCT = {
-    id: 7, name: "Test Headphones", description: "ANC", price: 49.99,
-    stock: 5, sku: "SKU-1", imageUrl: "", status: "ACTIVE",
-    categoryId: 2, categoryName: "Electronics", sellerId: 1,
-    sellerName: "Seller One", createdAt: "2026-08-07T00:00:00Z",
-    updatedAt: "2026-08-07T00:00:00Z",
+
+  const PRODUCT_ROW = {
+    id: 7,
+    name: "Test Headphones",
+    description: "ANC",
+    price: 49.99,
+    old_price: 59.99,
+    stock: 5,
+    sku: "SKU-1",
+    image_url: "",
+    status: "ACTIVE",
+    category_id: 2,
+    seller_id: "s1",
+    created_at: "2026-08-07T00:00:00Z",
+    updated_at: "2026-08-07T00:00:00Z",
+    category: { name: "Electronics" },
+    seller: { first_name: "Seller", last_name: "One" },
   };
 
+  const jsonResponse = (payload, { status = 200, headers = {} } = {}) => ({
+    ok: status >= 200 && status < 300,
+    status,
+    headers: {
+      get: (name) => {
+        const key = String(name).toLowerCase();
+        if (key === "content-type") return "application/json";
+        return headers[key] ?? "";
+      },
+    },
+    json: async () => payload,
+    text: async () => JSON.stringify(payload),
+  });
+
   const route = (url, method, options) => {
-    const { pathname } = new URL(url);
+    const { pathname, searchParams } = new URL(url);
     const body = options?.body ? JSON.parse(options.body) : null;
-    if (method === "POST" && pathname.endsWith("/auth/login")) {
-      return wrapped({ accessToken: "TOK-1", tokenType: "Bearer", expiresIn: 86400, user: { id: 1, firstName: "Jane", lastName: "Doe", email: "jane@t.com", role: "SELLER" } });
+
+    /* Auth */
+    if (method === "POST" && pathname.endsWith("/auth/v1/token")) {
+      if (searchParams.get("grant_type") === "password") {
+        return jsonResponse({
+          access_token: "TOK-1",
+          refresh_token: "RT-1",
+          expires_in: 3600,
+          token_type: "Bearer",
+          user: { id: "u1", email: "jane@t.com", user_metadata: { first_name: "Jane", last_name: "Doe" } },
+        });
+      }
+      return jsonResponse({ access_token: "TOK-1", refresh_token: "RT-1" });
     }
-    if (method === "POST" && pathname.endsWith("/auth/register")) {
-      return wrapped({ accessToken: "TOK-2", tokenType: "Bearer", expiresIn: 86400, user: { id: 2, firstName: "John", lastName: "Doe", email: "john@t.com", role: body.roleName || "CUSTOMER" } });
+    if (method === "POST" && pathname.endsWith("/auth/v1/signup")) {
+      return jsonResponse({ id: "u2", email: body.email, user_metadata: body.data || {} });
     }
-    if (method === "GET" && pathname.endsWith("/products/7")) return wrapped(PRODUCT);
-    if (method === "GET" && pathname.endsWith("/products")) {
-      return wrapped({ content: [PRODUCT], page: 0, size: 24, totalElements: 1, totalPages: 1, last: true });
+    if (method === "POST" && pathname.endsWith("/auth/v1/logout")) {
+      return jsonResponse({});
     }
-    if (method === "GET" && pathname.endsWith("/categories")) {
-      return wrapped([{ id: 2, name: "Electronics", description: "Gadgets" }]);
+    if (method === "POST" && pathname.endsWith("/auth/v1/recover")) {
+      return jsonResponse({});
     }
+    if (method === "GET" && pathname.endsWith("/auth/v1/user")) {
+      return jsonResponse({ id: "u1", email: "jane@t.com", user_metadata: { first_name: "Jane", last_name: "Doe" } });
+    }
+
+    /* PostgREST */
+    if (method === "GET" && pathname.endsWith("/rest/v1/profiles")) {
+      return jsonResponse(
+        [{ id: "u1", first_name: "Jane", last_name: "Doe", email: "jane@t.com", role: "SELLER", created_at: "2026-08-07T00:00:00Z" }],
+        { headers: { "content-range": "0-0/1" } }
+      );
+    }
+    if (method === "GET" && pathname.endsWith("/rest/v1/products")) {
+      const idFilter = searchParams.get("id");
+      if (idFilter) {
+        return idFilter === "eq.7"
+          ? jsonResponse([PRODUCT_ROW], { headers: { "content-range": "0-0/1" } })
+          : jsonResponse([], { headers: { "content-range": "0-0/0" } });
+      }
+      const range = options?.headers?.Range || "0-23";
+      return jsonResponse([PRODUCT_ROW], { headers: { "content-range": `${range}/1` } });
+    }
+    if (method === "GET" && pathname.endsWith("/rest/v1/categories")) {
+      return jsonResponse(
+        [{ id: 2, name: "Electronics", description: "Gadgets", created_at: "2026-08-07T00:00:00Z", updated_at: "2026-08-07T00:00:00Z" }],
+        { headers: { "content-range": "0-0/1" } }
+      );
+    }
+    if (method === "GET" && pathname.endsWith("/rest/v1/cart_items")) {
+      return jsonResponse([], { headers: { "content-range": "0-0/0" } });
+    }
+    if (method === "POST" && pathname.endsWith("/rest/v1/cart_items")) {
+      return jsonResponse([{ id: 100, ...body }]);
+    }
+    if (method === "PATCH" && pathname.endsWith("/rest/v1/cart_items")) {
+      return jsonResponse([{ id: 100, ...body }]);
+    }
+    if (method === "DELETE" && pathname.endsWith("/rest/v1/cart_items")) {
+      return jsonResponse([], { headers: { "content-range": "0-0/0" } });
+    }
+    if (method === "GET" && pathname.endsWith("/rest/v1/wishlist_items")) {
+      return jsonResponse([], { headers: { "content-range": "0-0/0" } });
+    }
+    if (method === "POST" && pathname.endsWith("/rest/v1/wishlist_items")) {
+      return jsonResponse([{ id: 200, ...body }]);
+    }
+    if (method === "DELETE" && pathname.endsWith("/rest/v1/wishlist_items")) {
+      return jsonResponse([], { headers: { "content-range": "0-0/0" } });
+    }
+
     throw new Error(`Unmapped route: ${method} ${url}`);
   };
 
   globalThis.fetch = async (url, options = {}) => {
-    requests.push({ url: String(url), method: options.method || "GET", body: options.body || null });
-    const result = route(String(url), options.method || "GET", options);
-    return {
-      ok: true, status: 200,
-      headers: { get: (h) => (h.toLowerCase() === "content-type" ? "application/json" : "") },
-      json: async () => result,
-      text: async () => JSON.stringify(result),
-    };
+    requests.push({
+      url: String(url),
+      method: options.method || "GET",
+      body: options.body || null,
+      headers: options.headers || null,
+    });
+    return route(String(url), options.method || "GET", options);
   };
 
+  /* ==========================================================
+     [C] Auth service (Supabase Auth)
+     ========================================================== */
+  section("authService");
   const auth = await import(app("js/services/authService.js"));
+
   const session = await auth.login({ email: "jane@t.com", password: "pw" });
-  check(session.token === "TOK-1", "login maps accessToken -> token");
-  check(session.user?.role === "SELLER", "login keeps user object");
+  check(session.token === "TOK-1", "login maps access_token -> token");
+  check(session.refreshToken === "RT-1", "login returns the refresh token");
+  check(session.user?.id === "u1", "login keeps the auth user id");
+  check(session.user?.role === "SELLER", "login role comes from profiles");
+  check(session.user?.firstName === "Jane", "login name comes from profile");
   auth.setSession(session);
   check(auth.getCurrentUser()?.email === "jane@t.com", "setSession persists user");
   check(auth.isAuthenticated(), "isAuthenticated true after login");
   check(auth.getRole() === "SELLER", "getRole returns normalized role");
   check(auth.getDisplayName() === "Jane Doe", "getDisplayName joins names");
   check(auth.getInitials() === "JD", "getInitials from names");
+  check(
+    requests.some((r) => r.url.includes("grant_type=password")),
+    "login calls /auth/v1/token?grant_type=password"
+  );
 
-  const regSession = await auth.register({ email: "john@t.com", password: "pw", roleName: "CUSTOMER" });
-  check(regSession.token === "TOK-2", "register unwraps response");
-  const regReq = requests.find((r) => r.url.includes("/auth/register"));
-  check(regReq && regReq.body.includes('"roleName"'), "register sends roleName (not role)");
+  await auth.refreshSession();
+  check(auth.getCurrentUser()?.role === "SELLER", "refreshSession revalidates profile");
+
+  globalThis.window.localStorage.removeItem("marketplace.auth.token");
+  await auth.refreshSession();
+  check(
+    requests.some((r) => r.url.includes("grant_type=refresh_token")),
+    "refreshSession exchanges the refresh token"
+  );
+  check(auth.getCurrentUser()?.role === "SELLER", "session restored after refresh exchange");
+
+  const regSession = await auth.register({ firstName: "John", lastName: "Doe", email: "john@t.com", password: "pw" });
+  check(regSession.token === null, "register resolves no token (email confirmation)");
+  check(regSession.user?.email === "john@t.com", "register returns the created user");
+  const regReq = requests.find((r) => r.url.includes("/auth/v1/signup"));
+  check(regReq && regReq.body.includes('"first_name"'), "register sends first_name metadata");
+  check(regReq && !regReq.body.includes("roleName"), "register no longer sends roleName");
   check(regReq && !regReq.body.includes('"role"'), "register does not send a bare role key");
 
   auth.setSession({ token: "TOK-2", user: { firstName: "John", role: "CUSTOMER" } });
   auth.logout();
   check(!auth.isAuthenticated(), "logout clears session");
+  check(
+    requests.some((r) => r.method === "POST" && r.url.includes("/auth/v1/logout")),
+    "logout revokes the session via /auth/v1/logout"
+  );
+
+  const forgot = await auth.forgotPassword("jane@t.com");
+  check(forgot.success === true, "forgotPassword succeeds");
+  check(
+    requests.some((r) => r.url.includes("/auth/v1/recover")),
+    "forgotPassword calls /auth/v1/recover"
+  );
 
   /* ==========================================================
-     [C] Product service (backend-wired)
+     [D] Product service (PostgREST)
      ========================================================== */
   section("productService");
-  auth.setSession({ token: "TOK-1", user: { firstName: "Jane", lastName: "Doe", email: "jane@t.com", role: "SELLER" } });
+  auth.setSession({ token: "TOK-1", user: { id: "u1", firstName: "Jane", lastName: "Doe", email: "jane@t.com", role: "SELLER" } });
   const product = await import(app("js/services/productService.js"));
 
   const list = await product.getProducts({ sort: "price_asc" });
-  check(list.totalElements === 1, "getProducts unwraps paged data");
+  check(list.totalElements === 1, "getProducts parses content-range total");
   check(Array.isArray(list.content) && list.content.length === 1, "getProducts content is an array");
-  check(list.content[0].category?.id === 2, "category.id normalized from categoryId");
-  check(list.content[0].category?.name === "Electronics", "category.name normalized from categoryName");
-  check(list.content[0].sellerName === "Seller One", "sellerName preserved");
+  check(list.content[0].category?.id === 2, "category.id normalized from category_id");
+  check(list.content[0].category?.name === "Electronics", "category.name from embedded category");
+  check(list.content[0].sellerName === "Seller One", "sellerName from embedded seller");
+  check(list.content[0].oldPrice === 59.99, "old_price mapped to oldPrice");
 
-  const sortReq = requests.find((r) => r.url.includes("/products?"));
-  check(sortReq && sortReq.url.includes("sort=price%2Casc"), "sort token mapped to Spring sort param");
-  check(sortReq && sortReq.url.includes("size=24"), "default page size applied");
+  const sortReq = requests.find((r) => r.url.includes("/rest/v1/products?"));
+  check(sortReq && sortReq.url.includes("order=price.asc"), "sort token mapped to PostgREST order");
+  check(sortReq && sortReq.url.includes("status=eq.ACTIVE"), "storefront filters to ACTIVE products");
+  check(sortReq && sortReq.headers.Range === "0-23", "default page size applied via Range header");
+  check(list.page === 0 && list.size === 24, "paged contract carries page/size");
+  check(list.totalPages === 1 && list.last === true, "paged contract computes totalPages/last");
 
   const featured = await product.getFeaturedProducts(8);
-  check(featured.content?.length === 1, "featured reuses list endpoint");
+  check(featured.content?.length === 1, "featured reuses the products list");
+  check(requests[requests.length - 1].headers.Range === "0-7", "featured requests rows 0-7");
 
   const detail = await product.getProduct(7);
   check(detail.id === 7 && detail.category?.id === 2, "getProduct unwraps + normalizes");
 
+  let notFound = false;
+  try {
+    await product.getProduct(999);
+  } catch (error) {
+    notFound = error?.status === 404;
+  }
+  check(notFound, "getProduct throws ApiError 404 when missing");
+
+  const beforeAll = requests.length;
+  const all = await product.getAllMatchingProducts({ keyword: "head" });
+  check(Array.isArray(all) && all.length === 1 && all[0].id === 7, "getAllMatchingProducts returns full content");
+  check(requests.length === beforeAll + 2, "getAllMatchingProducts probes total then fetches full set");
+  check(requests[beforeAll].url.includes("or="), "keyword mapped to PostgREST or(...) filter");
+
+  await product.getProducts({ categoryId: 2 });
+  check(
+    requests[requests.length - 1].url.includes("category_id=eq.2"),
+    "categoryId maps to category_id=eq.2"
+  );
+  await product.getProducts({ keyword: "mug" });
+  check(
+    requests[requests.length - 1].url.includes("or="),
+    "keyword maps to or(...) search filter"
+  );
+
   /* ==========================================================
-     [D] Category service (backend-wired + cache)
+     [E] Category service (PostgREST + cache)
      ========================================================== */
   section("categoryService");
   const category = await import(app("js/services/categoryService.js"));
@@ -204,12 +349,12 @@ const run = async () => {
   check(Array.isArray(cats) && cats.length === 1 && cats[0].name === "Electronics", "getCategories unwraps data array");
 
   /* ==========================================================
-     [E] Cart service (local)
+     [F] Cart service (local cache + Supabase sync)
      ========================================================== */
   section("cartService");
   const cart = await import(app("js/services/cartService.js"));
-  cart.addItem(PRODUCT, 2);
-  cart.addItem(PRODUCT, 1);
+  cart.addItem(PRODUCT_ROW, 2);
+  cart.addItem(PRODUCT_ROW, 1);
   check(cart.getCartItemCount() === 3, "addItem merges quantities");
   check(cart.getCartSubtotal() === 49.99 * 3, "getCartSubtotal sums price x qty");
   cart.addItem({ id: 9, name: "Mug", price: 10 }, 1);
@@ -222,23 +367,59 @@ const run = async () => {
   check(cart.getCartItemCount() === 0, "removeItem empties cart");
   cart.clearCart();
   check(cart.getCartItemCount() === 0, "clearCart idempotent");
+  check(
+    requests.some((r) => r.method === "POST" && r.url.includes("/rest/v1/cart_items")),
+    "addItem pushes POST to cart_items"
+  );
+  check(
+    requests.some((r) => r.url.includes("on_conflict=user_id%2Cproduct_id")),
+    "cart upsert targets user_id+product_id"
+  );
+
+  cart.setCart([{ id: 500, productId: 11, name: "Server Item", price: 5, quantity: 1, subtotal: 5 }]);
+  cart.updateQuantity(11, 3);
+  check(
+    requests.some((r) => r.method === "PATCH" && r.url.includes("/rest/v1/cart_items")),
+    "updateQuantity PATCHes cart_items"
+  );
+  cart.removeItem(11);
+  check(
+    requests.some((r) => r.method === "DELETE" && r.url.includes("/rest/v1/cart_items")),
+    "removeItem DELETEs cart_items"
+  );
+  const cartSynced = await cart.syncCartFromServer();
+  check(cartSynced === true, "syncCartFromServer replaces cache from server");
 
   /* ==========================================================
-     [F] Wishlist service (local)
+     [G] Wishlist service (local cache + Supabase sync)
      ========================================================== */
   section("wishlistService");
   const wish = await import(app("js/services/wishlistService.js"));
   check(wish.getWishlistCount() === 0, "wishlist starts empty");
-  check(wish.addItem(PRODUCT) === true, "addItem returns true");
+  check(wish.addItem(PRODUCT_ROW) === true, "addItem returns true");
   check(wish.isInWishlist(7) === true, "isInWishlist true");
-  check(wish.addItem(PRODUCT) === false, "duplicate addItem rejected");
-  check(wish.toggleItem(PRODUCT) === false, "toggleItem removes wishlisted item");
-  check(wish.toggleItem(PRODUCT) === true, "toggleItem re-adds item");
+  check(wish.addItem(PRODUCT_ROW) === false, "duplicate addItem rejected");
+  check(wish.toggleItem(PRODUCT_ROW) === false, "toggleItem removes wishlisted item");
+  check(wish.toggleItem(PRODUCT_ROW) === true, "toggleItem re-adds item");
   wish.removeItem(7);
   check(wish.getWishlistCount() === 0, "removeItem clears");
+  check(
+    requests.some((r) => r.method === "POST" && r.url.includes("/rest/v1/wishlist_items")),
+    "addItem pushes POST to wishlist_items"
+  );
+  check(
+    requests.some((r) => r.url.includes("on_conflict=user_id%2Cproduct_id")),
+    "wishlist upsert targets user_id+product_id"
+  );
+  check(
+    requests.some((r) => r.method === "DELETE" && r.url.includes("/rest/v1/wishlist_items")),
+    "removeItem DELETEs wishlist_items"
+  );
+  const wishSynced = await wish.syncWishlistFromServer();
+  check(wishSynced === true, "syncWishlistFromServer replaces cache from server");
 
   /* ==========================================================
-     [G] Orders service (local) + enum alignment
+     [H] Orders service (local) + enum alignment
      ========================================================== */
   section("ordersService");
   const orders = await import(app("js/services/ordersService.js"));
@@ -267,7 +448,7 @@ const run = async () => {
   check(orders.updateOrderStatus(order.id, "NOPE") === null, "updateOrderStatus rejects bad status");
 
   /* ==========================================================
-     [H] Seller service (local) + enum alignment
+     [I] Seller service (local) + enum alignment
      ========================================================== */
   section("sellerService");
   const seller = await import(app("js/services/sellerService.js"));
@@ -294,7 +475,7 @@ const run = async () => {
   check(stats.revenue === 30, "revenue excludes CANCELLED");
 
   /* ==========================================================
-     [I] Admin service (local)
+     [J] Admin service (local)
      ========================================================== */
   section("adminService");
   const admin = await import(app("js/services/adminService.js"));
@@ -312,7 +493,7 @@ const run = async () => {
   check(astats.totalUsers === 5, "admin stats totalUsers");
 
   /* ==========================================================
-     [J] Profile service (local)
+     [K] Profile service (local)
      ========================================================== */
   section("profileService");
   const profile = await import(app("js/services/profileService.js"));
@@ -329,6 +510,10 @@ const run = async () => {
     threw = true;
   }
   check(threw, "changePassword rejects wrong current password");
+
+  auth.logout();
+  check((await cart.syncCartFromServer()) === false, "cart sync is a no-op when signed out");
+  check((await wish.syncWishlistFromServer()) === false, "wishlist sync is a no-op when signed out");
 
   console.log(
     failures === 0

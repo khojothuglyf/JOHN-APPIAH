@@ -1,17 +1,31 @@
 /* ============================================================
    APP CONFIGURATION
-   Central place for API base URL, endpoint registry, storage
-   keys and user roles. Update API_BASE_URL once the Spring Boot
-   backend is deployed; nothing else in the app should change.
+   Central place for the Supabase credentials, endpoint registry,
+   storage keys and user roles. The Supabase URL + anon key come
+   from the generated api-config.js (rewritten at deploy time from
+   the SUPABASE_URL / SUPABASE_ANON_KEY environment variables);
+   nothing else in the app should change.
    ============================================================ */
+
+export {
+  API_BASE_URL,
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
+} from "./api-config.js";
 
 export const APP_NAME = "Marketplace";
 
 /**
- * Base URL of the Spring Boot REST API.
- * @todo Point this at the deployed backend when available.
+ * True when the app is served from a local development origin
+ * (file://, localhost or a loopback hostname). Used to gate dev-only
+ * preview conveniences; always false on the deployed Netlify site.
  */
-export const API_BASE_URL = "http://localhost:8080/api/v1";
+export function isPreviewMode() {
+  if (typeof window === "undefined") return false;
+  const { protocol, hostname } = window.location;
+  const localHost = ["localhost", "127.0.0.1", "::1"].includes(hostname);
+  return protocol === "file:" || localHost;
+}
 
 /**
  * Fill the {param} placeholders of an endpoint template with real
@@ -24,9 +38,12 @@ export function endpointPath(template, params = {}) {
 }
 
 /**
- * Endpoint registry - the ONLY source of truth for API paths.
- * Every service function maps to one of these entries so we
- * never invent endpoints at call sites.
+ * Endpoint registry - the ONLY source of truth for the LEGACY Spring
+ * REST API paths. The storefront services (auth, products, categories,
+ * cart, wishlist) now talk to Supabase directly (see js/services/
+ * supabase.js); this registry is kept for the still-local services
+ * (orders, seller, admin, profile) that document their future REST
+ * contract here, and is validated by the test suite.
  *
  * Paths marked "planned" are NOT implemented by the backend yet;
  * frontend surfaces that use them degrade gracefully (local
@@ -44,7 +61,7 @@ export const API_ENDPOINTS = {
   auth: {
     login: "/auth/login",
     register: "/auth/register",
-    // planned: no backend endpoints yet
+    // planned: forgot/reset need backend endpoints
     forgotPassword: "/auth/forgot-password",
     resetPassword: "/auth/reset-password",
     logout: "/auth/logout",
@@ -118,6 +135,7 @@ export const API_ENDPOINTS = {
 /** Storage keys used for localStorage / sessionStorage. */
 export const STORAGE_KEYS = {
   token: "marketplace.auth.token",
+  refreshToken: "marketplace.auth.refresh",
   user: "marketplace.auth.user",
   cart: "marketplace.cart",
   wishlist: "marketplace.wishlist",
@@ -129,6 +147,7 @@ export const STORAGE_KEYS = {
   theme: "marketplace.theme",
   lastVisitedCategory: "marketplace.last.category",
   categoriesCache: "marketplace.categories.cache",
+  installHint: "marketplace.install.hint.seen",
 };
 
 /** Application user roles returned by the backend. */

@@ -3,8 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Page Not Found | Marketplace</title>
-    <meta name="description" content="The page you are looking for could not be found." />
+    <title>You're Offline | Marketplace</title>
+    <meta name="description" content="You appear to be offline. Reconnect to keep shopping on Marketplace." />
+    <meta name="robots" content="noindex" />
     <link rel="icon" href="../images/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -29,15 +30,17 @@
     <main id="main">
       <div class="container">
         <div class="error-page">
-          <p class="error-page__code" aria-hidden="true">404</p>
-          <h1 class="error-page__title">Page not found</h1>
+          <p class="error-page__code" aria-hidden="true">Offline</p>
+          <h1 class="error-page__title">You're offline</h1>
           <p class="error-page__text">
-            The page you are looking for was moved, removed or never existed.
-            Let's get you back to shopping.
+            The connection was lost. Once you're back online, refresh the page
+            to keep browsing and shopping.
           </p>
           <div class="u-flex u-gap-3 u-flex-wrap u-justify-center">
-            <a class="btn btn--primary" href="../index.html">Back to Home</a>
-            <a class="btn btn--outline" href="products.html">Browse Products</a>
+            <button class="btn btn--primary" type="button" data-retry>
+              Try Again
+            </button>
+            <a class="btn btn--outline" href="../index.html">Back to Home</a>
           </div>
         </div>
       </div>

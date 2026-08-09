@@ -1,0 +1,5 @@
+# Netlify redirects.
+# Existing files are always served directly (they win over these rules).
+# Any other requested path falls through to the styled 404 page.
+
+/*  /pages/404.html  404

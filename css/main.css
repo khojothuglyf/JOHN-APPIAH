@@ -37,6 +37,7 @@
 @import url("./components/breadcrumb.css");
 @import url("./components/pagination.css");
 @import url("./components/backtotop.css");
+@import url("./components/install-banner.css");
 
 /* ---- Pages (shared shell) ---- */
 @import url("./pages/pages.css");

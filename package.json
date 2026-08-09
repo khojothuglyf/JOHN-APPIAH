@@ -5,6 +5,7 @@
   "description": "Marketplace System frontend (HTML5, CSS3, ES6 modules). Phase 13 QA test suite.",
   "type": "module",
   "scripts": {
+    "build": "node scripts/build.mjs",
     "test": "node tests/static.test.mjs && node tests/services.test.mjs",
     "test:static": "node tests/static.test.mjs",
     "test:services": "node tests/services.test.mjs",

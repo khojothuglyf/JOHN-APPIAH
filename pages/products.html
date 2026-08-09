@@ -14,6 +14,15 @@
     />
     <link rel="stylesheet" href="../css/main.css" />
     <link rel="stylesheet" href="../css/pages/catalog.css" />
+      <!-- PWA-META -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#2f6fed" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Marketplace" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Marketplace" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   </head>
   <body>
     <div data-component="navbar"></div>
@@ -63,6 +72,7 @@
               <option value="price_desc">Price: High to Low</option>
               <option value="newest">Newest</option>
               <option value="rating">Top Rated</option>
+              <option value="discount">Biggest Discount</option>
             </select>
           </div>
 
@@ -72,78 +82,180 @@
           </div>
         </form>
 
-        <div class="catalog-results">
-          <p class="catalog-results__count" data-results-count></p>
-        </div>
+        <div class="catalog-layout">
+          <aside class="catalog-filters" aria-label="Product filters">
+            <div class="catalog-filters__head">
+              <h2 class="catalog-filters__title">Filter by</h2>
+              <button class="btn btn--ghost btn--sm" type="button" data-filter-clear>Clear all</button>
+              <button class="catalog-filters__close" type="button" data-filter-close aria-label="Close filters">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
 
-        <div class="grid grid--fill" style="--grid-min: 220px" data-products>
-          <div class="card">
-            <div class="skeleton skeleton--image"></div>
-            <div class="card__body">
-              <div class="skeleton skeleton--text"></div>
-              <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
-              <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+            <section class="filter-section">
+              <h3 class="filter-section__title">Price</h3>
+              <div class="price-range" data-price-range>
+                <div class="price-range__track"></div>
+                <div class="price-range__highlight" data-price-highlight></div>
+                <input class="price-range__input price-range__input--min" type="range"
+                  data-price-min-slider min="0" max="100" step="1" value="0"
+                  aria-label="Minimum price" />
+                <input class="price-range__input price-range__input--max" type="range"
+                  data-price-max-slider min="0" max="100" step="1" value="100"
+                  aria-label="Maximum price" />
+              </div>
+              <div class="price-range__fields">
+                <div class="form-group">
+                  <label class="form-label" for="filter-price-min">Min</label>
+                  <input class="form-input" id="filter-price-min" type="number"
+                    data-price-min-input min="0" step="1" placeholder="No min" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="filter-price-max">Max</label>
+                  <input class="form-input" id="filter-price-max" type="number"
+                    data-price-max-input min="0" step="1" placeholder="No max" />
+                </div>
+              </div>
+            </section>
+
+            <fieldset class="filter-section">
+              <legend class="filter-section__title">Rating</legend>
+              <label class="filter-check">
+                <input type="radio" name="rating" value="4" data-rating />
+                <span class="filter-check__stars" aria-hidden="true">★★★★★</span> 4★ &amp; up
+              </label>
+              <label class="filter-check">
+                <input type="radio" name="rating" value="3" data-rating />
+                <span class="filter-check__stars" aria-hidden="true">★★★★☆</span> 3★ &amp; up
+              </label>
+              <label class="filter-check">
+                <input type="radio" name="rating" value="2" data-rating />
+                <span class="filter-check__stars" aria-hidden="true">★★★☆☆</span> 2★ &amp; up
+              </label>
+              <label class="filter-check">
+                <input type="radio" name="rating" value="1" data-rating />
+                <span class="filter-check__stars" aria-hidden="true">★★☆☆☆</span> 1★ &amp; up
+              </label>
+              <label class="filter-check">
+                <input type="radio" name="rating" value="0" data-rating checked />
+                <span>Any rating</span>
+              </label>
+            </fieldset>
+
+            <section class="filter-section">
+              <h3 class="filter-section__title">Availability</h3>
+              <label class="filter-check">
+                <input type="checkbox" data-in-stock />
+                <span>In stock only</span>
+              </label>
+            </section>
+
+            <section class="filter-section" data-seller-section>
+              <h3 class="filter-section__title">Seller</h3>
+              <div class="filter-list" data-seller-list></div>
+            </section>
+
+            <fieldset class="filter-section">
+              <legend class="filter-section__title">Discount</legend>
+              <label class="filter-check">
+                <input type="radio" name="discount" value="0" data-discount checked />
+                <span>Any</span>
+              </label>
+              <label class="filter-check">
+                <input type="radio" name="discount" value="10" data-discount />
+                <span>10% off or more</span>
+              </label>
+              <label class="filter-check">
+                <input type="radio" name="discount" value="25" data-discount />
+                <span>25% off or more</span>
+              </label>
+              <label class="filter-check">
+                <input type="radio" name="discount" value="50" data-discount />
+                <span>50% off or more</span>
+              </label>
+            </fieldset>
+          </aside>
+
+          <div class="catalog-content">
+            <div class="catalog-results">
+              <p class="catalog-results__count" data-results-count></p>
+              <button class="btn btn--outline btn--sm u-hide-desktop" type="button" data-filter-toggle>
+                Filters
+              </button>
             </div>
-          </div>
-          <div class="card">
-            <div class="skeleton skeleton--image"></div>
-            <div class="card__body">
-              <div class="skeleton skeleton--text"></div>
-              <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
-              <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+
+            <div class="filter-chips" data-filter-chips hidden></div>
+
+            <div class="grid grid--fill" style="--grid-min: 220px" data-products>
+              <div class="card">
+                <div class="skeleton skeleton--image"></div>
+                <div class="card__body">
+                  <div class="skeleton skeleton--text"></div>
+                  <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+                  <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="skeleton skeleton--image"></div>
+                <div class="card__body">
+                  <div class="skeleton skeleton--text"></div>
+                  <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+                  <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="skeleton skeleton--image"></div>
+                <div class="card__body">
+                  <div class="skeleton skeleton--text"></div>
+                  <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+                  <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="skeleton skeleton--image"></div>
+                <div class="card__body">
+                  <div class="skeleton skeleton--text"></div>
+                  <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+                  <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="skeleton skeleton--image"></div>
+                <div class="card__body">
+                  <div class="skeleton skeleton--text"></div>
+                  <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+                  <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="skeleton skeleton--image"></div>
+                <div class="card__body">
+                  <div class="skeleton skeleton--text"></div>
+                  <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+                  <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="skeleton skeleton--image"></div>
+                <div class="card__body">
+                  <div class="skeleton skeleton--text"></div>
+                  <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+                  <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="skeleton skeleton--image"></div>
+                <div class="card__body">
+                  <div class="skeleton skeleton--text"></div>
+                  <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
+                  <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="card">
-            <div class="skeleton skeleton--image"></div>
-            <div class="card__body">
-              <div class="skeleton skeleton--text"></div>
-              <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
-              <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
-            </div>
-          </div>
-          <div class="card">
-            <div class="skeleton skeleton--image"></div>
-            <div class="card__body">
-              <div class="skeleton skeleton--text"></div>
-              <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
-              <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
-            </div>
-          </div>
-          <div class="card">
-            <div class="skeleton skeleton--image"></div>
-            <div class="card__body">
-              <div class="skeleton skeleton--text"></div>
-              <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
-              <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
-            </div>
-          </div>
-          <div class="card">
-            <div class="skeleton skeleton--image"></div>
-            <div class="card__body">
-              <div class="skeleton skeleton--text"></div>
-              <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
-              <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
-            </div>
-          </div>
-          <div class="card">
-            <div class="skeleton skeleton--image"></div>
-            <div class="card__body">
-              <div class="skeleton skeleton--text"></div>
-              <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
-              <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
-            </div>
-          </div>
-          <div class="card">
-            <div class="skeleton skeleton--image"></div>
-            <div class="card__body">
-              <div class="skeleton skeleton--text"></div>
-              <div class="skeleton skeleton--text-sm" style="width: 60%"></div>
-              <div class="skeleton skeleton--text-lg" style="width: 40%"></div>
-            </div>
+
+            <nav class="pagination" data-pagination aria-label="Product pages"></nav>
           </div>
         </div>
-
-        <nav class="pagination" data-pagination aria-label="Product pages"></nav>
       </div>
     </main>
 

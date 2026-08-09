@@ -18,9 +18,10 @@
    as { success:boolean, message:string, data:T, timestamp:string }.
 
    Service modules that consume API_ENDPOINTS:
-     authService, productService, categoryService. Cart, wishlist,
-     orders, seller and admin services are still local fallbacks and
-     document their future REST contract in their header comments.
+     authService, productService, categoryService, wishlistService,
+     cartService. Orders, seller and admin services are still local
+     fallbacks and document their future REST contract in their
+     header comments.
    ============================================================ */
 
 export { http, ApiError } from "../utils/http.js";

@@ -69,12 +69,24 @@ document.addEventListener("DOMContentLoaded", () => {
         lastName: values.lastName.trim(),
         email: values.email.trim(),
         password: values.password,
-        roleName: values.role || USER_ROLES.CUSTOMER,
       });
+
+      if (!token) {
+        // Supabase email confirmation is enabled: tell the user to
+        // verify before they can sign in.
+        setSubmitState(form, false);
+        showAlert(
+          form,
+          "We've sent a confirmation link to your email. Click it to activate your account, then sign in.",
+          "Check your inbox"
+        );
+        return;
+      }
+
       setSession({ token, user });
 
       const target =
-        user.role === USER_ROLES.SELLER
+        user?.role === USER_ROLES.SELLER
           ? pageUrl("pages/seller-dashboard.html")
           : pageUrl("index.html");
       window.location.assign(target);

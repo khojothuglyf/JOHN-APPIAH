@@ -10,8 +10,8 @@
 
 import { $, escapeHtml, pageUrl, redirect } from "../utils/dom.js";
 import { formatCurrency, formatDate } from "../utils/format.js";
-import { getCurrentUser, getRole, getDisplayName, isAuthenticated } from "../services/authService.js";
-import { USER_ROLES } from "../config.js";
+import { getCurrentUser, getRole, getDisplayName, isAuthenticated, signInPreview } from "../services/authService.js";
+import { USER_ROLES, isPreviewMode } from "../config.js";
 import { PRODUCT_STATUS } from "../services/sellerService.js";
 import {
   getUsers,
@@ -32,10 +32,18 @@ const page = {
   statProducts: null,
   statOrders: null,
   statRevenue: null,
+  heroHealth: null,
+  heroStatus: null,
+  healthProgress: null,
+  healthCopy: null,
+  insightGrowth: null,
+  insightActiveProducts: null,
+  insightOrders: null,
   usersTable: null,
   usersList: null,
   usersEmpty: null,
   usersCount: null,
+  userSearch: null,
   categoriesForm: null,
   categoriesList: null,
   categoriesEmpty: null,
@@ -44,12 +52,22 @@ const page = {
   productsList: null,
   productsEmpty: null,
   productsCount: null,
+  productSearch: null,
 };
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!isAuthenticated()) {
-    redirect("pages/login.html", { redirect: "pages/admin-dashboard.html" });
-    return;
+    if (isPreviewMode()) {
+      signInPreview(USER_ROLES.ADMIN);
+      showToast({
+        title: "Preview mode",
+        message: "Signed in as demo admin (Ada Lovelace).",
+        type: "info",
+      });
+    } else {
+      redirect("pages/login.html", { redirect: "pages/admin-dashboard.html" });
+      return;
+    }
   }
   if (getRole() !== USER_ROLES.ADMIN) {
     redirect("index.html");
@@ -62,10 +80,18 @@ document.addEventListener("DOMContentLoaded", () => {
   page.statProducts = $("[data-stat-products]");
   page.statOrders = $("[data-stat-orders]");
   page.statRevenue = $("[data-stat-revenue]");
+  page.heroHealth = $("[data-platform-health]");
+  page.heroStatus = $("[data-platform-status]");
+  page.healthProgress = $("[data-health-progress]");
+  page.healthCopy = $("[data-health-copy]");
+  page.insightGrowth = $("[data-insight-growth]");
+  page.insightActiveProducts = $("[data-insight-active-products]");
+  page.insightOrders = $("[data-insight-orders]");
   page.usersTable = $("[data-users-table]");
   page.usersList = $("[data-users-list]");
   page.usersEmpty = $("[data-users-empty]");
   page.usersCount = $("[data-users-count]");
+  page.userSearch = $("[data-user-search]");
   page.categoriesForm = $("[data-category-form]");
   page.categoriesList = $("[data-categories-list]");
   page.categoriesEmpty = $("[data-categories-empty]");
@@ -74,6 +100,8 @@ document.addEventListener("DOMContentLoaded", () => {
   page.productsList = $("[data-products-list]");
   page.productsEmpty = $("[data-products-empty]");
   page.productsCount = $("[data-products-count]");
+  page.productSearch = $("[data-product-search]");
+  page.activityList = $("[data-activity-list]");
 
   $("[data-admin-name]").textContent = getDisplayName() || "Admin";
 
@@ -85,6 +113,9 @@ function bindEvents() {
   document.querySelectorAll("[data-tab]").forEach((tab) => {
     tab.addEventListener("click", () => switchTab(tab.dataset.tab));
   });
+
+  page.userSearch?.addEventListener("input", renderUsers);
+  page.productSearch?.addEventListener("input", renderProducts);
 
   // Category form
   page.categoriesForm.addEventListener("submit", (event) => {
@@ -189,9 +220,80 @@ function bindEvents() {
 
 function renderAll() {
   renderStats();
+  renderExecutiveOverview();
   renderUsers();
   renderCategories();
   renderProducts();
+}
+
+/* ---- Executive overview ---- */
+
+function renderExecutiveOverview() {
+  const stats = getAdminStats();
+  const users = getUsers();
+  const products = getAdminProducts();
+  const activeProducts = products.filter((product) => product.status === PRODUCT_STATUS.ACTIVE).length;
+  const pendingReview = Math.max(0, products.length - activeProducts);
+  const healthScore = Math.min(98, Math.max(74, Math.round(72 + stats.totalUsers * 2 + activeProducts * 1.5 - pendingReview)));
+  const status = healthScore >= 90 ? "Excellent" : healthScore >= 80 ? "Strong" : "Needs attention";
+
+  if (page.heroHealth) page.heroHealth.textContent = `${healthScore}%`;
+  if (page.heroStatus) page.heroStatus.textContent = status;
+  if (page.healthProgress) page.healthProgress.style.width = `${healthScore}%`;
+  if (page.healthCopy) {
+    page.healthCopy.textContent = `${activeProducts} products are live, ${pendingReview} need attention, and ${stats.totalUsers} accounts are active.`;
+  }
+
+  if (page.insightGrowth) {
+    page.insightGrowth.textContent = `+${Math.min(28, Math.max(8, stats.totalUsers + 3))}%`;
+  }
+  if (page.insightActiveProducts) page.insightActiveProducts.textContent = String(activeProducts);
+  if (page.insightOrders) page.insightOrders.textContent = String(stats.totalOrders);
+
+  if (page.activityList) {
+    renderActivityList(users, products);
+  }
+}
+
+function renderActivityList(users = [], products = []) {
+  const latestUsers = [...users]
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .slice(0, 3);
+  const latestProducts = [...products]
+    .sort((a, b) => Number(b.id || 0) - Number(a.id || 0))
+    .slice(0, 3);
+
+  const items = [
+    ...latestUsers.map((user) => ({
+      title: "New account",
+      subtitle: `${user.firstName || user.email || "User"} joined the platform`,
+      tone: "success",
+    })),
+    ...latestProducts.map((product) => ({
+      title: product.status === PRODUCT_STATUS.INACTIVE ? "Needs review" : "Catalog update",
+      subtitle: `${product.name || "Product"} is ${product.status?.toLowerCase() || "active"}`,
+      tone: product.status === PRODUCT_STATUS.INACTIVE ? "warning" : "info",
+    })),
+  ].slice(0, 5);
+
+  if (!items.length) {
+    page.activityList.innerHTML = '<li class="activity-item activity-item--empty">No recent activity to report.</li>';
+    return;
+  }
+
+  page.activityList.innerHTML = items
+    .map(
+      (item) => `
+        <li class="activity-item">
+          <div>
+            <p class="activity-item__title">${escapeHtml(item.title)}</p>
+            <p class="activity-item__subtitle">${escapeHtml(item.subtitle)}</p>
+          </div>
+          <span class="activity-item__pill activity-item__pill--${item.tone}">${escapeHtml(item.tone === "warning" ? "Review" : item.tone === "info" ? "Live" : "Fresh")}</span>
+        </li>
+      `
+    )
+    .join("");
 }
 
 /* ---- Stats ---- */
@@ -208,11 +310,23 @@ function renderStats() {
 
 function renderUsers() {
   const users = getUsers();
-  page.usersCount.textContent = `(${users.length})`;
+  const query = page.userSearch?.value.trim().toLowerCase() ?? "";
+  const visibleUsers = query
+    ? users.filter((user) => {
+        const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").toLowerCase();
+        const haystack = [fullName, user.email, user.role].filter(Boolean).join(" ").toLowerCase();
+        return haystack.includes(query);
+      })
+    : users;
 
-  if (users.length === 0) {
+  page.usersCount.textContent = `(${visibleUsers.length}${query ? ` of ${users.length}` : ""})`;
+
+  if (visibleUsers.length === 0) {
     page.usersTable.hidden = true;
     page.usersEmpty.hidden = false;
+    page.usersEmpty.querySelector(".page-placeholder__title").textContent = query
+      ? "No users match this search"
+      : "No users";
     return;
   }
 
@@ -220,7 +334,7 @@ function renderUsers() {
   page.usersEmpty.hidden = true;
 
   const currentId = String(getCurrentUser()?.id ?? "");
-  page.usersList.innerHTML = users
+  page.usersList.innerHTML = visibleUsers
     .map((user) => userRowTemplate(user, String(user.id) === currentId))
     .join("");
 }
@@ -300,17 +414,28 @@ function categoryItemTemplate(category = {}) {
 
 function renderProducts() {
   const products = getAdminProducts();
-  page.productsCount.textContent = `(${products.length})`;
+  const query = page.productSearch?.value.trim().toLowerCase() ?? "";
+  const visibleProducts = query
+    ? products.filter((product) => {
+        const haystack = [product.name, product.category, product.status].filter(Boolean).join(" ").toLowerCase();
+        return haystack.includes(query);
+      })
+    : products;
 
-  if (products.length === 0) {
+  page.productsCount.textContent = `(${visibleProducts.length}${query ? ` of ${products.length}` : ""})`;
+
+  if (visibleProducts.length === 0) {
     page.productsTable.hidden = true;
     page.productsEmpty.hidden = false;
+    page.productsEmpty.querySelector(".page-placeholder__title").textContent = query
+      ? "No products match this search"
+      : "No products on the platform";
     return;
   }
 
   page.productsTable.hidden = false;
   page.productsEmpty.hidden = true;
-  page.productsList.innerHTML = products.map(productModRowTemplate).join("");
+  page.productsList.innerHTML = visibleProducts.map(productModRowTemplate).join("");
 }
 
 function productModRowTemplate(product = {}) {

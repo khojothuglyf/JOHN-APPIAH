@@ -1,0 +1,59 @@
+# Netlify configuration
+# SUPABASE_URL and SUPABASE_ANON_KEY must be set as environment variables
+# in Netlify (Site settings > Environment variables) - they are read at
+# build time by scripts/build.mjs and baked into dist/js/api-config.js.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# ---------- Security headers (all routes) ----------
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+    # Inline styles are required by the existing markup (style="...").
+    # connect-src https: keeps the env-driven API origin working on HTTPS.
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+
+# ---------- Caching ----------
+# HTML: always revalidate so visitors get fresh markup.
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Static assets: short-lived browser cache; the service worker handles
+# longer-lived offline caching at runtime.
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+[[headers]]
+  for = "/components/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+# Never let the browser serve a stale service worker.
+[[headers]]
+  for = "/service-worker.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+# Manifest: short-lived cache so icon/theme updates propagate.
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"

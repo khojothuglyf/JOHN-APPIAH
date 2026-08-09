@@ -20,8 +20,9 @@ import {
   getRole,
   getDisplayName,
   isAuthenticated,
+  signInPreview,
 } from "../services/authService.js";
-import { USER_ROLES } from "../config.js";
+import { USER_ROLES, isPreviewMode } from "../config.js";
 import { ORDER_STATUS, getOrderStatusLabel } from "../services/ordersService.js";
 import {
   PRODUCT_STATUS,
@@ -57,8 +58,17 @@ let deleteTargetId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!isAuthenticated()) {
-    redirect("pages/login.html", { redirect: "pages/seller-dashboard.html" });
-    return;
+    if (isPreviewMode()) {
+      signInPreview(USER_ROLES.ADMIN);
+      showToast({
+        title: "Preview mode",
+        message: "Signed in as demo admin (Ada Lovelace).",
+        type: "info",
+      });
+    } else {
+      redirect("pages/login.html", { redirect: "pages/seller-dashboard.html" });
+      return;
+    }
   }
   const role = getRole();
   if (role !== USER_ROLES.SELLER && role !== USER_ROLES.ADMIN) {

@@ -14,6 +14,15 @@
     />
     <link rel="stylesheet" href="../css/main.css" />
     <link rel="stylesheet" href="../css/pages/admin-dashboard.css" />
+      <!-- PWA-META -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#2f6fed" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Marketplace" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Marketplace" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   </head>
   <body>
     <div data-component="navbar"></div>
@@ -34,6 +43,57 @@
           </div>
           <a class="btn btn--primary" href="../index.html">View storefront</a>
         </div>
+
+        <section class="dashboard-hero card" aria-label="Executive overview">
+          <div class="dashboard-hero__content">
+            <p class="dashboard-hero__eyebrow">Marketplace command center</p>
+            <h2 class="dashboard-hero__title">Run the storefront with Amazon-style clarity and speed.</h2>
+            <p class="dashboard-hero__text">
+              Track growth, protect catalog quality, and keep top-priority actions moving without leaving the dashboard.
+            </p>
+            <div class="dashboard-hero__actions">
+              <a class="btn btn--primary" href="#products">Review catalog</a>
+              <a class="btn btn--secondary" href="#users">Manage access</a>
+            </div>
+          </div>
+          <div class="dashboard-hero__panel">
+            <p class="dashboard-hero__panel-label">Platform health</p>
+            <div class="dashboard-hero__score-row">
+              <strong class="dashboard-hero__score" data-platform-health></strong>
+              <span class="dashboard-hero__chip" data-platform-status></span>
+            </div>
+            <div class="dash-progress" aria-hidden="true">
+              <span data-health-progress></span>
+            </div>
+            <p class="dashboard-hero__panel-copy" data-health-copy></p>
+          </div>
+        </section>
+
+        <div class="insight-grid">
+          <article class="insight-card card">
+            <p class="insight-card__label">Momentum</p>
+            <strong class="insight-card__value" data-insight-growth></strong>
+            <p class="insight-card__meta">New accounts this month</p>
+          </article>
+          <article class="insight-card card">
+            <p class="insight-card__label">Live catalog</p>
+            <strong class="insight-card__value" data-insight-active-products></strong>
+            <p class="insight-card__meta">Products currently visible</p>
+          </article>
+          <article class="insight-card card">
+            <p class="insight-card__label">Orders tracked</p>
+            <strong class="insight-card__value" data-insight-orders></strong>
+            <p class="insight-card__meta">Customer orders in motion</p>
+          </article>
+        </div>
+
+        <section class="activity-card card" aria-label="Recent platform activity">
+          <div class="dashboard-toolbar dashboard-toolbar--stack">
+            <h2 class="dashboard-section-title">Live activity</h2>
+            <p class="activity-card__copy">Recent account and catalog operations at a glance.</p>
+          </div>
+          <ul class="activity-list" data-activity-list></ul>
+        </section>
 
         <div class="stat-grid">
           <div class="stat-card card">
@@ -83,9 +143,13 @@
             data-tab="products" role="tab" aria-selected="false">Products</button>
         </div>
 
-        <section data-panel="users" role="tabpanel" aria-label="Users">
-          <div class="dashboard-toolbar">
+        <section id="users" data-panel="users" role="tabpanel" aria-label="Users">
+          <div class="dashboard-toolbar dashboard-toolbar--stack">
             <h2 class="dashboard-section-title">Users <span data-users-count></span></h2>
+            <label class="dashboard-search">
+              <span class="sr-only">Search users</span>
+              <input type="search" placeholder="Search users" data-user-search />
+            </label>
           </div>
           <div class="admin-table-wrap card" data-users-table hidden>
             <table class="admin-table">
@@ -109,7 +173,7 @@
           </div>
         </section>
 
-        <section data-panel="categories" role="tabpanel" aria-label="Categories" hidden>
+        <section id="categories" data-panel="categories" role="tabpanel" aria-label="Categories" hidden>
           <div class="dashboard-toolbar">
             <h2 class="dashboard-section-title">Categories <span data-categories-count></span></h2>
             <form class="admin-add-form" data-category-form novalidate>
@@ -128,9 +192,13 @@
           </div>
         </section>
 
-        <section data-panel="products" role="tabpanel" aria-label="Products" hidden>
-          <div class="dashboard-toolbar">
+        <section id="products" data-panel="products" role="tabpanel" aria-label="Products" hidden>
+          <div class="dashboard-toolbar dashboard-toolbar--stack">
             <h2 class="dashboard-section-title">Products <span data-products-count></span></h2>
+            <label class="dashboard-search">
+              <span class="sr-only">Search products</span>
+              <input type="search" placeholder="Search products" data-product-search />
+            </label>
           </div>
           <div class="admin-table-wrap card" data-products-table hidden>
             <table class="admin-table">

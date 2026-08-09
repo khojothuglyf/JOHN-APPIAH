@@ -17,6 +17,7 @@ import {
   getDisplayName,
   getInitials,
   isAuthenticated,
+  isPreviewSession,
   logout,
 } from "../services/authService.js";
 import { getCartItemCount } from "../services/cartService.js";
@@ -71,6 +72,7 @@ export async function mountNavbar(root) {
 
   window.addEventListener("cart:update", () => updateBadges(root));
   window.addEventListener("wishlist:update", () => updateBadges(root));
+  window.addEventListener("auth:changed", () => renderAuthMenu(root));
 }
 
 function initNavbar(root) {
@@ -123,15 +125,18 @@ function renderAuthMenu(root) {
         </button>
         <div class="dropdown__menu" role="menu">
           <div class="dropdown__header">
-            <span class="dropdown__header-name">${escapeHtml(getDisplayName())}</span>
+            <span class="dropdown__header-name u-flex u-items-center u-justify-between u-gap-2">
+              <span>${escapeHtml(getDisplayName())}</span>
+              ${isPreviewSession() ? '<span class="badge badge--info">Preview</span>' : ""}
+            </span>
             <span class="dropdown__header-role">${escapeHtml(role.toLowerCase())}</span>
           </div>
-          <a class="dropdown__item" href="pages/profile.html">${SVG_ICONS.user}My Profile</a>
-          <a class="dropdown__item" href="pages/orders.html">${SVG_ICONS.file}My Orders</a>
-          ${dashboardUrl ? `<a class="dropdown__item" href="${dashboardUrl}">${SVG_ICONS.layout}Dashboard</a>` : ""}
+          <a class="dropdown__item" href="${pageUrl("pages/profile.html")}">${SVG_ICONS.user}My Profile</a>
+          <a class="dropdown__item" href="${pageUrl("pages/orders.html")}">${SVG_ICONS.file}My Orders</a>
+          ${dashboardUrl ? `<a class="dropdown__item" href="${pageUrl(dashboardUrl)}">${SVG_ICONS.layout}Dashboard</a>` : ""}
           <div class="dropdown__divider"></div>
           <button class="dropdown__item dropdown__item--danger" type="button" data-logout>
-            ${SVG_ICONS.logout}Sign Out
+            ${SVG_ICONS.logout}${isPreviewSession() ? "Exit preview & sign in" : "Sign Out"}
           </button>
         </div>
       </div>
@@ -159,16 +164,17 @@ function renderAuthMenu(root) {
     });
 
     container.querySelector("[data-logout]")?.addEventListener("click", () => {
+      const wasPreview = isPreviewSession();
       logout();
       storage.remove(STORAGE_KEYS.cart);
       storage.remove(STORAGE_KEYS.wishlist);
-      window.location.assign(pageUrl("index.html"));
+      window.location.assign(pageUrl(wasPreview ? "pages/login.html" : "index.html"));
     });
   } else {
     container.innerHTML = `
       <div class="navbar-auth u-flex u-items-center u-gap-2">
-        <a class="btn btn--ghost btn--sm" href="pages/login.html">Sign In</a>
-        <a class="btn btn--primary btn--sm" href="pages/register.html">Create Account</a>
+        <a class="btn btn--ghost btn--sm" href="${pageUrl("pages/login.html")}">Sign In</a>
+        <a class="btn btn--primary btn--sm" href="${pageUrl("pages/register.html")}">Create Account</a>
       </div>
     `;
   }

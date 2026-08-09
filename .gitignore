@@ -12,3 +12,6 @@ desktop.ini
 node_modules/
 npm-debug.log*
 package-lock.json
+
+# Build output (Netlify publish directory)
+dist/

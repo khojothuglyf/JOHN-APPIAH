@@ -1,0 +1,60 @@
+{
+  "name": "Marketplace - Shop Smart, Live Better",
+  "short_name": "Marketplace",
+  "description": "A modern e-commerce marketplace connecting buyers and trusted sellers.",
+  "id": "/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f7fb",
+  "theme_color": "#2f6fed",
+  "lang": "en",
+  "categories": ["shopping", "ecommerce"],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "shortcuts": [
+    {
+      "name": "Search products",
+      "short_name": "Search",
+      "description": "Search the full catalog with filters",
+      "url": "/pages/products.html"
+    },
+    {
+      "name": "My Wishlist",
+      "short_name": "Wishlist",
+      "url": "/pages/wishlist.html"
+    },
+    {
+      "name": "My Cart",
+      "short_name": "Cart",
+      "url": "/pages/cart.html"
+    },
+    {
+      "name": "My Orders",
+      "short_name": "Orders",
+      "url": "/pages/orders.html"
+    }
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

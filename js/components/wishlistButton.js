@@ -47,6 +47,14 @@ export function initWishlistButtons() {
   if (initialized) return;
   initialized = true;
 
+  document.addEventListener("wishlist:update", () => {
+    document
+      .querySelectorAll("[data-wishlist-toggle]")
+      .forEach((button) =>
+        updateButtonState(button, isInWishlist(button.dataset.wishlistId))
+      );
+  });
+
   document.addEventListener("click", (event) => {
     const button = event.target.closest("[data-wishlist-toggle]");
     if (!button) return;

@@ -115,6 +115,17 @@
   color: var(--color-text-inverse);
 }
 
+.btn--secondary {
+  background-color: var(--color-dark-2);
+  color: var(--color-text-inverse);
+}
+
+.btn--secondary:hover {
+  background-color: var(--color-dark);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-md);
+}
+
 /* ---- Sizes ---- */
 .btn--sm {
   padding: 0.4375rem 0.875rem;
