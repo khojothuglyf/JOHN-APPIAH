@@ -4,9 +4,11 @@
    payment details, validates them and places the order with the
    Spring Boot backend. Only supabaseProductId + quantity and the
    shipping details are sent - the backend computes all prices and
-   totals. On success the backend order is cached and the cart is
-   cleared before redirecting to the confirmation page. If the
-   backend is unavailable no local order is created.
+   totals. The payment is then recorded against the returned order
+   via the payments API (card completes instantly, cash on delivery
+   stays pending). On success the backend order is cached and the
+   cart is cleared before redirecting to the confirmation page. If
+   the backend is unavailable no local order is created.
    ============================================================ */
 
 import { $, escapeHtml, pageUrl, redirect } from "../utils/dom.js";
@@ -19,7 +21,15 @@ import {
   setSubmitState,
 } from "../utils/form.js";
 import { getCart, getCartSubtotal, clearCart } from "../services/cartService.js";
-import { createOrder, PAYMENT_METHODS } from "../services/ordersService.js";
+import {
+  createOrder,
+  PAYMENT_METHODS,
+  recordPaymentForOrder,
+} from "../services/ordersService.js";
+import {
+  BACKEND_PAYMENT_METHODS,
+  payForOrder,
+} from "../services/paymentService.js";
 import { getCurrentUser, isAuthenticated } from "../services/authService.js";
 import { showToast } from "../components/toast.js";
 
@@ -167,15 +177,34 @@ async function placeOrder() {
     // Only items (supabaseProductId + quantity) and the shipping
     // details are sent. The backend computes all prices and totals;
     // the returned order is the authoritative record.
-    const order = await createOrder({
-      items: getCart(),
-      shipping,
-      payment: {
-        method: values.paymentMethod,
-        last4: isCard ? values.cardNumber.replace(/\D/g, "").slice(-4) : null,
-      },
+    const order = await createOrder({ items: getCart(), shipping });
+
+    // Record the payment against the order. Card completes instantly
+    // on the backend; cash on delivery stays pending until delivery.
+    // payForOrder recovers idempotently when this order already has a
+    // payment (a retried checkout whose earlier response was lost).
+    let payment;
+    try {
+      payment = await payForOrder(
+        order.id,
+        BACKEND_PAYMENT_METHODS[values.paymentMethod]
+      );
+    } catch (error) {
+      throw new Error(
+        `Your order ${order.orderNumber || order.id} was created, but the ` +
+          `payment could not be recorded (${error?.message || "please try again"}). ` +
+          `Your cart has been kept so you can retry.`
+      );
+    }
+
+    recordPaymentForOrder(order.id, {
+      ...payment,
+      last4: isCard ? values.cardNumber.replace(/\D/g, "").slice(-4) : null,
     });
 
+    // The order and its payment are both recorded on the backend - only
+    // now is the cart cleared. A failure above (or a backend rejection)
+    // keeps the cart intact and never fabricates a local order.
     clearCart();
     redirect("pages/order-confirmation.html", { id: order.id });
   } catch (error) {

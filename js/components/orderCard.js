@@ -6,10 +6,11 @@
 
 import { escapeHtml, pageUrl } from "../utils/dom.js";
 import { formatCurrency, formatDate } from "../utils/format.js";
+import { getOrderStatusLabel } from "../services/ordersService.js";
 import {
-  getOrderStatusLabel,
-  PAYMENT_METHODS,
-} from "../services/ordersService.js";
+  BACKEND_PAYMENT_METHODS,
+  getPaymentStatusLabel,
+} from "../services/paymentService.js";
 
 const IMAGE_FALLBACK = pageUrl("images/placeholder.svg");
 
@@ -72,10 +73,18 @@ export function orderDetailsTemplate(order = {}) {
     .filter(Boolean)
     .join(", ");
 
-  const isCard = order.payment?.method === PAYMENT_METHODS.CARD;
-  const paymentText = isCard
+  // The payment method comes from the backend PaymentMethod enum:
+  // CARD or CASH_ON_DELIVERY (checkout only offers those two).
+  const isCard = order.payment?.method === BACKEND_PAYMENT_METHODS.CARD;
+  const methodText = isCard
     ? `Card ending in ${order.payment.last4 || "••••"}`
     : "Cash on delivery";
+  const statusText = order.payment?.status
+    ? getPaymentStatusLabel(order.payment.status)
+    : null;
+  const paymentText = statusText
+    ? `${methodText} · ${statusText}`
+    : methodText;
 
   return `
     <div class="order-card__grid">

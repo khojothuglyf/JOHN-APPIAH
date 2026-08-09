@@ -62,9 +62,9 @@ export const ORDER_STATUS = {
   CANCELLED: "CANCELLED",
 };
 
-/** Payment methods supported by checkout (display only; the backend
- *  computes all money values and does not accept a payment method in
- *  the order request - payment recording is a separate phase). */
+/** Payment methods offered at checkout. The order request itself
+ *  does not carry a method; checkout records the payment separately
+ *  against the backend (see paymentService.payForOrder). */
 export const PAYMENT_METHODS = {
   CARD: "CARD",
   COD: "COD",
@@ -192,9 +192,10 @@ function isSignedIn() {
  * prices, applies discounts and computes totals authoritatively.
  * Resolves the mapped backend order (cached for the confirmation
  * page). Throws when the backend is unreachable or rejects - no local
- * order is ever fabricated.
+ * order is ever fabricated. The payment for the order is recorded in
+ * a separate call (paymentService.payForOrder).
  */
-export async function createOrder({ items = [], shipping = {}, payment = {} } = {}) {
+export async function createOrder({ items = [], shipping = {} } = {}) {
   if (!isSignedIn()) {
     throw new ApiError(401, "Please sign in to place an order.");
   }
@@ -219,16 +220,25 @@ export async function createOrder({ items = [], shipping = {}, payment = {} } = 
 
   const envelope = await http.post(API_ENDPOINTS.orders.create, body);
   const order = mapOrder(envelope?.data);
-  // Display-only: the backend does not record the payment method yet.
-  // This is not used for any money value (subtotal/total come from
-  // the backend); it only keeps the confirmation page honest about
-  // the option the customer picked.
-  order.payment = {
-    method: payment?.method || PAYMENT_METHODS.COD,
-    last4: payment?.last4 || null,
-  };
   upsertOrderCache(order);
   return order;
+}
+
+/** Attach a recorded backend payment to the cached order so the
+ *  confirmation page and dashboards render the real payment status,
+ *  method and reference. `payment` is the mapped PaymentResponse from
+ *  paymentService (last4 is storefront-only and may be passed in). */
+export function recordPaymentForOrder(orderId, payment = {}) {
+  const order = getOrderById(orderId);
+  if (!order) return null;
+  order.payment = {
+    method: payment.method,
+    last4: payment.last4 || null,
+    status: payment.status,
+    transactionRef: payment.transactionRef,
+    paidAt: payment.paidAt,
+  };
+  return upsertOrderCache(order);
 }
 
 /**

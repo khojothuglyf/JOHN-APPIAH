@@ -90,6 +90,10 @@ const run = async () => {
     ["orders.status", "/orders/{id}/status"],
     ["orders.sellerOrders", "/orders/seller"],
     ["orders.adminOrders", "/orders/admin"],
+    ["payments.create", "/payments/orders/{orderId}"],
+    ["payments.byOrder", "/payments/orders/{orderId}"],
+    ["payments.my", "/payments/my"],
+    ["payments.refund", "/payments/{paymentId}/refund"],
     ["seller.orders", "/orders/seller"],
     ["seller.updateOrderStatus", "/orders/{id}/status"],
     ["seller.analytics.summary", "/seller/analytics/summary"],
@@ -122,6 +126,13 @@ const run = async () => {
      [B] Supabase mock routes
      ========================================================== */
   const requests = [];
+
+  /* Payment mock state: one PaymentResponse per order id, and
+     incrementing ids so the orders + payment tests each get a
+     distinct backend order (the orderResponse() default is 42). */
+  const paymentsByOrder = new Map();
+  let orderSeq = 42;
+  let paymentSeq = 500;
 
   const PRODUCT_ROW = {
     id: 7,
@@ -277,11 +288,13 @@ const run = async () => {
         );
       }
       const first = body?.items?.[0] || { supabaseProductId: "7", quantity: 1 };
+      const orderId = orderSeq++;
       return jsonResponse(
         {
           success: true,
           message: "Order placed successfully",
           data: orderResponse({
+            id: orderId,
             shippingAddress: body.shippingAddress,
             city: body.city,
             postalCode: body.postalCode,
@@ -338,6 +351,65 @@ const run = async () => {
         success: true,
         message: "Order status updated",
         data: orderResponse({ status: body?.status }),
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+
+    /* Spring Boot payments backend (CARD completes, COD stays PENDING,
+       duplicate POST -> 409 so retried checkouts recover idempotently) */
+    if (method === "POST" && /\/api\/v1\/payments\/orders\/\d+$/.test(pathname)) {
+      const orderId = Number(pathname.match(/\/orders\/(\d+)$/)[1]);
+      if (orderId === 999) {
+        return jsonResponse(
+          { success: false, message: "Cannot pay for an order that is CANCELLED", data: null, timestamp: "2026-08-07T00:00:00Z" },
+          { status: 400 }
+        );
+      }
+      if (paymentsByOrder.has(orderId)) {
+        return jsonResponse(
+          { success: false, message: "This order already has a payment", data: null, timestamp: "2026-08-07T00:00:00Z" },
+          { status: 409 }
+        );
+      }
+      const order = orderResponse({ id: orderId });
+      const cod = body?.method === "CASH_ON_DELIVERY";
+      const payment = {
+        id: paymentSeq,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        amount: order.totalAmount,
+        currency: order.currency,
+        method: body?.method,
+        status: cod ? "PENDING" : "COMPLETED",
+        transactionRef: `PAY-${String(paymentSeq).padStart(8, "0")}`,
+        paidAt: cod ? null : "2026-08-09T10:00:00",
+        createdAt: "2026-08-09T10:00:00",
+      };
+      paymentSeq++;
+      paymentsByOrder.set(orderId, payment);
+      return jsonResponse(
+        {
+          success: true,
+          message: "Payment processed",
+          data: payment,
+          timestamp: "2026-08-07T00:00:00Z",
+        },
+        { status: 201 }
+      );
+    }
+    if (method === "GET" && /\/api\/v1\/payments\/orders\/\d+$/.test(pathname)) {
+      const orderId = Number(pathname.match(/\/orders\/(\d+)$/)[1]);
+      const payment = paymentsByOrder.get(orderId);
+      if (!payment) {
+        return jsonResponse(
+          { success: false, message: "No payment found for order id: " + orderId, data: null, timestamp: "2026-08-07T00:00:00Z" },
+          { status: 404 }
+        );
+      }
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: payment,
         timestamp: "2026-08-07T00:00:00Z",
       });
     }
@@ -982,7 +1054,6 @@ const run = async () => {
       zip: "62701",
       country: "US",
     },
-    payment: { method: "CARD", last4: "4242" },
     subtotal: 9999,
     shippingCost: 500,
     total: 9999,
@@ -1007,8 +1078,27 @@ const run = async () => {
   check(order.currency === "USD", "backend currency is mapped");
   check(order.items[0]?.productId === "7", "item productId maps to the Supabase product id");
   check(order.items[0]?.name === "Headphones" && order.items[0]?.price === 49.99, "item name/price come from the backend");
-  check(order.payment?.method === "CARD", "payment display info kept for the confirmation page");
+  check(order.payment === undefined, "createOrder leaves payment unset (recorded separately)");
   check(orders.getOrderById(order.id)?.id === order.id, "created order is cached for getOrderById");
+
+  // The payment is attached from the backend payment response.
+  const paid = orders.recordPaymentForOrder(order.id, {
+    method: "CARD",
+    last4: "4242",
+    status: "COMPLETED",
+    transactionRef: "TXN-REF-1",
+    paidAt: "2026-08-09T10:00:00Z",
+  });
+  check(
+    paid?.payment?.method === "CARD" &&
+      paid?.payment?.status === "COMPLETED" &&
+      paid?.payment?.transactionRef === "TXN-REF-1",
+    "recordPaymentForOrder attaches the backend payment to the cached order"
+  );
+  check(
+    orders.getOrderById(order.id)?.payment?.status === "COMPLETED",
+    "payment is persisted on the cached order"
+  );
 
   const updated = await orders.updateOrderStatus(order.id, "SHIPPED");
   check(updated?.status === "SHIPPED", "updateOrderStatus advances to SHIPPED");
@@ -1053,6 +1143,142 @@ const run = async () => {
   check(requests.length === offlineStart, "no backend request is made when signed out");
 
   // Restore a session for the later profile tests.
+  auth.setSession({
+    token: "TOK-1",
+    user: { id: "u1", firstName: "Jane", lastName: "Doe", email: "jane@t.com", role: "SELLER" },
+  });
+
+  /* ==========================================================
+     [H2] Payment service (Spring Boot backend) + COD contract
+     ========================================================== */
+  section("paymentService");
+  const payment = await import(app("js/services/paymentService.js"));
+
+  // Enum + method mapping alignment with the backend PaymentStatus /
+  // PaymentMethod enums. COD always maps to CASH_ON_DELIVERY.
+  check(payment.PAYMENT_STATUS.PENDING === "PENDING", "PAYMENT_STATUS.PENDING");
+  check(payment.PAYMENT_STATUS.COMPLETED === "COMPLETED", "PAYMENT_STATUS.COMPLETED");
+  check(payment.PAYMENT_STATUS.FAILED === "FAILED", "PAYMENT_STATUS.FAILED");
+  check(payment.PAYMENT_STATUS.REFUNDED === "REFUNDED", "PAYMENT_STATUS.REFUNDED");
+  check(payment.BACKEND_PAYMENT_METHODS.CARD === "CARD", "CARD maps to the backend CARD method");
+  check(payment.BACKEND_PAYMENT_METHODS.COD === "CASH_ON_DELIVERY", "COD maps to the backend CASH_ON_DELIVERY method");
+  check(payment.getPaymentStatusLabel("PENDING") === "Awaiting payment", "PENDING label");
+  check(payment.getPaymentStatusLabel("COMPLETED") === "Paid", "COMPLETED label");
+  check(payment.getPaymentStatusLabel("FAILED") === "Payment failed", "FAILED label");
+  check(payment.getPaymentStatusLabel("REFUNDED") === "Refunded", "REFUNDED label");
+
+  // COD initialization: POST /payments/orders/{id} with the backend
+  // method, resolved to a PENDING payment (completed only on delivery).
+  const codOrder = await orders.createOrder({
+    items: [{ productId: 7, name: "Headphones", price: 1, quantity: 2 }],
+    shipping: { address: "1 Main St", city: "Springfield", zip: "62701", country: "US" },
+  });
+  const payStart = requests.length;
+  const codPayment = await payment.payForOrder(codOrder.id, payment.BACKEND_PAYMENT_METHODS.COD);
+  const payReq = requests[payStart];
+  check(payReq?.method === "POST" && /\/api\/v1\/payments\/orders\/\d+$/.test(payReq.url), "payForOrder POSTs /payments/orders/{orderId}");
+  check(JSON.parse(payReq.body)?.method === "CASH_ON_DELIVERY", "COD sends only { method: CASH_ON_DELIVERY }");
+  check(codPayment?.method === "CASH_ON_DELIVERY", "COD records the backend CASH_ON_DELIVERY method");
+  check(codPayment?.status === "PENDING", "COD creates a PENDING payment");
+  check(codPayment?.paidAt == null, "COD payment has no paidAt until delivery");
+  check(typeof codPayment?.transactionRef === "string" && codPayment.transactionRef.startsWith("PAY-"), "COD payment carries a backend transaction reference");
+  check(codPayment?.amount === 99.98 && codPayment?.currency === "USD", "payment amount/currency come from the backend order");
+
+  // Successful recording: the mapped payment is attached to the cached
+  // order so the confirmation page and dashboards show the real status.
+  const codRecorded = orders.recordPaymentForOrder(codOrder.id, codPayment);
+  check(codRecorded?.payment?.method === "CASH_ON_DELIVERY", "recordPaymentForOrder attaches the COD method");
+  check(orders.getOrderById(codOrder.id)?.payment?.status === "PENDING", "COD PENDING status is persisted on the cached order");
+
+  // Duplicate-payment recovery: a 409 (already paid) is recovered
+  // idempotently by reading the existing payment - no second payment is
+  // fabricated and the earlier CASH_ON_DELIVERY record wins.
+  const dupStart = requests.length;
+  const dupPayment = await payment.payForOrder(codOrder.id, payment.BACKEND_PAYMENT_METHODS.CARD);
+  check(requests[dupStart]?.method === "POST", "duplicate payment POSTs first");
+  check(
+    requests.slice(dupStart).some((r) => r.method === "GET" && /\/api\/v1\/payments\/orders\/\d+$/.test(r.url)),
+    "duplicate payment recovers idempotently by reading the existing payment"
+  );
+  check(
+    dupPayment?.method === "CASH_ON_DELIVERY" && dupPayment?.status === "PENDING",
+    "recovery returns the existing COD payment, never a fabricated one"
+  );
+
+  // A fresh order paid by card completes instantly on the backend.
+  const cardOrder = await orders.createOrder({
+    items: [{ productId: 7, name: "Headphones", price: 1, quantity: 2 }],
+    shipping: { address: "2 Main St", city: "Springfield", zip: "62701", country: "US" },
+  });
+  const cardPayment = await payment.payForOrder(cardOrder.id, payment.BACKEND_PAYMENT_METHODS.CARD);
+  check(cardPayment?.method === "CARD" && cardPayment?.status === "COMPLETED", "card payment completes instantly on the backend");
+  check(cardPayment?.paidAt != null, "completed card payment carries a paidAt");
+  const cardRecorded = orders.recordPaymentForOrder(cardOrder.id, { ...cardPayment, last4: "4242" });
+  check(cardRecorded?.payment?.method === "CARD" && cardRecorded?.payment?.status === "COMPLETED", "recordPaymentForOrder attaches the completed card payment");
+  check(orders.getOrderById(cardOrder.id)?.payment?.last4 === "4242", "storefront-only last4 rides along on the cached order");
+
+  // Input validation is local (no backend request).
+  const guardStart = requests.length;
+  let missingId = null;
+  try { await payment.payForOrder(null, "CARD"); } catch (e) { missingId = e; }
+  check(missingId?.status === 400, "payForOrder rejects a missing order id");
+  check(requests.length === guardStart, "missing order id fails before any request");
+  let missingMethod = null;
+  try { await payment.payForOrder(cardOrder.id, ""); } catch (e) { missingMethod = e; }
+  check(missingMethod?.status === 400, "payForOrder rejects a missing payment method");
+  check(requests.length === guardStart, "missing method fails before any request");
+
+  // Backend rejections surface and never fabricate a payment or a local
+  // order; the cached order simply keeps whatever it had.
+  let payReject = null;
+  try { await payment.payForOrder(999, payment.BACKEND_PAYMENT_METHODS.CARD); } catch (e) { payReject = e; }
+  check(payReject?.status === 400 && payReject?.message.includes("CANCELLED"), "backend payment rejection surfaces the error");
+  const afterFailPayment = orders.getOrderById(cardOrder.id)?.payment;
+  check(
+    afterFailPayment?.method === "CARD" && afterFailPayment?.status === "COMPLETED",
+    "failed payment does not fabricate a payment on cached orders"
+  );
+
+  // Reading a payment for an order that has none surfaces the backend 404.
+  let noPayment = null;
+  try { await payment.getPaymentByOrderId(888); } catch (e) { noPayment = e; }
+  check(noPayment?.status === 404, "getPaymentByOrderId surfaces 404 when no payment exists");
+
+  // Authentication guard: signed-out payment calls reject 401 without a
+  // request (mirrors createOrder).
+  auth.logout();
+  const signedOutStart = requests.length;
+  let payAuthError = null;
+  try { await payment.payForOrder(cardOrder.id, payment.BACKEND_PAYMENT_METHODS.COD); } catch (e) { payAuthError = e; }
+  check(payAuthError?.status === 401, "signed-out payForOrder rejects 401");
+  let readAuthError = null;
+  try { await payment.getPaymentByOrderId(cardOrder.id); } catch (e) { readAuthError = e; }
+  check(readAuthError?.status === 401, "signed-out getPaymentByOrderId rejects 401");
+  check(requests.length === signedOutStart, "signed-out payment calls make no request");
+
+  // Checkout only clears the cart after the payment is recorded: the
+  // page maps the chosen method through BACKEND_PAYMENT_METHODS and only
+  // then empties the cart, and it contains no simulated gateway.
+  const checkoutSrc = readFileSync(join(ROOT, "js", "pages", "checkout.js"), "utf8");
+  check(
+    checkoutSrc.indexOf("payForOrder(") !== -1 &&
+      checkoutSrc.indexOf("payForOrder(") < checkoutSrc.indexOf("clearCart("),
+    "checkout records the payment before clearing the cart"
+  );
+  check(
+    checkoutSrc.indexOf("recordPaymentForOrder(") < checkoutSrc.indexOf("clearCart("),
+    "checkout attaches the payment before clearing the cart"
+  );
+  check(
+    checkoutSrc.includes("BACKEND_PAYMENT_METHODS[values.paymentMethod]"),
+    "checkout maps the selected method through BACKEND_PAYMENT_METHODS"
+  );
+  check(
+    !/Paystack|paystack|Stripe|PaymentIntent|setTimeout/.test(checkoutSrc),
+    "checkout contains no fake/simulated payment gateway behaviour"
+  );
+
+  // Restore a session for the later seller tests.
   auth.setSession({
     token: "TOK-1",
     user: { id: "u1", firstName: "Jane", lastName: "Doe", email: "jane@t.com", role: "SELLER" },

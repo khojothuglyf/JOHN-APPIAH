@@ -102,6 +102,12 @@ export const API_ENDPOINTS = {
     sellerOrders: "/orders/seller",
     adminOrders: "/orders/admin",
   },
+  payments: {
+    create: "/payments/orders/{orderId}",
+    byOrder: "/payments/orders/{orderId}",
+    my: "/payments/my",
+    refund: "/payments/{paymentId}/refund",
+  },
   users: {
     // planned: no backend endpoints yet
     profile: "/users/me",
