@@ -44,6 +44,14 @@
           <a class="btn btn--primary" href="products.html">View storefront</a>
         </div>
 
+        <div class="alert alert--error" data-dashboard-error hidden role="alert">
+          <svg class="alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+          <div class="alert__content">
+            <p class="alert__title">Couldn't load your seller data</p>
+            <p data-dashboard-error-message>We couldn't reach the TradeSphere server. Your changes are safe; try refreshing in a moment.</p>
+          </div>
+        </div>
+
         <div class="stat-grid">
           <div class="stat-card card">
             <span class="stat-card__icon stat-card__icon--primary">
@@ -91,6 +99,10 @@
           <button class="dashboard-tabs__tab" type="button"
             data-tab="orders" role="tab" aria-selected="false" aria-controls="orders-panel">
             Orders
+          </button>
+          <button class="dashboard-tabs__tab" type="button"
+            data-tab="analytics" role="tab" aria-selected="false" aria-controls="analytics-panel">
+            Analytics
           </button>
         </div>
 
@@ -141,6 +153,88 @@
             <p class="page-placeholder__text">
               Orders placed through checkout will appear here for fulfilment.
             </p>
+          </div>
+        </section>
+
+        <section data-panel="analytics" role="tabpanel" aria-label="Analytics" hidden>
+          <div class="dashboard-toolbar">
+            <h2 class="dashboard-section-title">Sales analytics</h2>
+          </div>
+
+          <div class="alert alert--error" data-analytics-error hidden role="alert">
+            <svg class="alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+            <div class="alert__content">
+              <p class="alert__title">Analytics unavailable</p>
+              <p data-analytics-error-message>Sales analytics could not be loaded right now. Please try again.</p>
+            </div>
+          </div>
+
+          <div class="dashboard-toolbar">
+            <h3 class="dashboard-section-title">Top products</h3>
+          </div>
+          <div class="seller-table-wrap card" data-top-products-wrap hidden>
+            <table class="seller-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Units sold</th>
+                  <th class="u-text-right">Revenue</th>
+                </tr>
+              </thead>
+              <tbody data-top-products-list></tbody>
+            </table>
+          </div>
+          <div class="page-placeholder" data-top-products-empty hidden>
+            <span class="page-placeholder__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1Z"/></svg>
+            </span>
+            <h3 class="page-placeholder__title">No sales yet</h3>
+            <p class="page-placeholder__text">Products sold through checkout will appear here.</p>
+          </div>
+
+          <div class="dashboard-toolbar">
+            <h3 class="dashboard-section-title">Sales by category</h3>
+          </div>
+          <div class="seller-table-wrap card" data-category-sales-wrap hidden>
+            <table class="seller-table">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Units sold</th>
+                  <th class="u-text-right">Revenue</th>
+                </tr>
+              </thead>
+              <tbody data-category-sales-list></tbody>
+            </table>
+          </div>
+          <div class="page-placeholder" data-category-sales-empty hidden>
+            <span class="page-placeholder__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M7 6v12h10V6"/></svg>
+            </span>
+            <h3 class="page-placeholder__title">No category sales</h3>
+            <p class="page-placeholder__text">Category breakdown appears once you have orders.</p>
+          </div>
+
+          <div class="dashboard-toolbar">
+            <h3 class="dashboard-section-title">Revenue timeline</h3>
+          </div>
+          <div class="seller-table-wrap card" data-timeline-wrap hidden>
+            <table class="seller-table">
+              <thead>
+                <tr>
+                  <th>Day</th>
+                  <th class="u-text-right">Revenue</th>
+                </tr>
+              </thead>
+              <tbody data-timeline-list></tbody>
+            </table>
+          </div>
+          <div class="page-placeholder" data-timeline-empty hidden>
+            <span class="page-placeholder__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            </span>
+            <h3 class="page-placeholder__title">No revenue yet</h3>
+            <p class="page-placeholder__text">Daily revenue will appear here once you make sales.</p>
           </div>
         </section>
       </div>

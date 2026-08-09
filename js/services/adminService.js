@@ -164,12 +164,16 @@ export function deleteCategory(id) {
 
 /* ---- Products (moderation) ---- */
 
-/** All products across the platform (seller catalogue). */
+/** All products across the platform (seller catalogue cache). */
 export function getAdminProducts() {
   return getSellerProducts();
 }
 
-/** Toggle a product between ACTIVE and INACTIVE. */
+/**
+ * Toggle a product between ACTIVE and INACTIVE. Resolves the updated
+ * product (via the backend sellerService), or null when the status
+ * value is invalid. Backend errors reject.
+ */
 export function updateProductStatus(id, status) {
   if (!Object.values(PRODUCT_STATUS).includes(status)) return null;
   return updateProduct(id, { status });

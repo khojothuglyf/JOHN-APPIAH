@@ -111,9 +111,12 @@ export const API_ENDPOINTS = {
   seller: {
     orders: "/orders/seller",
     updateOrderStatus: "/orders/{id}/status",
-    // analytics family: /seller/analytics/summary, /top-products,
-    // /sales-by-category, /revenue-timeline
-    analytics: "/seller/analytics",
+    analytics: {
+      summary: "/seller/analytics/summary",
+      topProducts: "/seller/analytics/top-products",
+      salesByCategory: "/seller/analytics/sales-by-category",
+      revenueTimeline: "/seller/analytics/revenue-timeline",
+    },
   },
   admin: {
     categories: "/categories",

@@ -14,6 +14,7 @@ import {
   readFormData,
   clearFieldErrors,
   showFieldErrors,
+  setSubmitState,
 } from "../utils/form.js";
 import {
   getCurrentUser,
@@ -26,18 +27,22 @@ import { USER_ROLES, isPreviewMode } from "../config.js";
 import {
   ORDER_STATUS,
   getOrderStatusLabel,
-  syncOrders,
 } from "../services/ordersService.js";
 import {
   PRODUCT_STATUS,
   getSellerProduct,
   getSellerProducts,
+  syncSellerProducts,
   createProduct,
   updateProduct,
   deleteProduct,
   getSellerOrders,
   updateSellerOrderStatus,
-  getSellerStats,
+  syncSellerOrders,
+  getSellerSummary,
+  getTopProducts,
+  getSalesByCategory,
+  getRevenueTimeline,
 } from "../services/sellerService.js";
 import { showToast } from "../components/toast.js";
 import { getCategories } from "../services/categoryService.js";
@@ -49,6 +54,8 @@ const page = {
   statActiveOrders: null,
   statPendingOrders: null,
   statRevenue: null,
+  dashboardError: null,
+  dashboardErrorMessage: null,
   productsTable: null,
   productsList: null,
   productsEmpty: null,
@@ -57,9 +64,21 @@ const page = {
   ordersEmpty: null,
   ordersCount: null,
   productForm: null,
+  analyticsError: null,
+  analyticsErrorMessage: null,
+  topProductsWrap: null,
+  topProductsList: null,
+  topProductsEmpty: null,
+  categorySalesWrap: null,
+  categorySalesList: null,
+  categorySalesEmpty: null,
+  timelineWrap: null,
+  timelineList: null,
+  timelineEmpty: null,
 };
 
 let deleteTargetId = null;
+let dashboardSummary = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!isAuthenticated()) {
@@ -87,6 +106,8 @@ document.addEventListener("DOMContentLoaded", () => {
   page.statActiveOrders = $("[data-stat-active-orders]");
   page.statPendingOrders = $("[data-stat-pending-orders]");
   page.statRevenue = $("[data-stat-revenue]");
+  page.dashboardError = $("[data-dashboard-error]");
+  page.dashboardErrorMessage = $("[data-dashboard-error-message]");
   page.productsTable = $("[data-products-table]");
   page.productsList = $("[data-products-list]");
   page.productsEmpty = $("[data-products-empty]");
@@ -95,27 +116,58 @@ document.addEventListener("DOMContentLoaded", () => {
   page.ordersEmpty = $("[data-orders-empty]");
   page.ordersCount = $("[data-orders-count]");
   page.productForm = $("[data-product-form]");
+  page.analyticsError = $("[data-analytics-error]");
+  page.analyticsErrorMessage = $("[data-analytics-error-message]");
+  page.topProductsWrap = $("[data-top-products-wrap]");
+  page.topProductsList = $("[data-top-products-list]");
+  page.topProductsEmpty = $("[data-top-products-empty]");
+  page.categorySalesWrap = $("[data-category-sales-wrap]");
+  page.categorySalesList = $("[data-category-sales-list]");
+  page.categorySalesEmpty = $("[data-category-sales-empty]");
+  page.timelineWrap = $("[data-timeline-wrap]");
+  page.timelineList = $("[data-timeline-list]");
+  page.timelineEmpty = $("[data-timeline-empty]");
 
   $("[data-seller-name]").textContent = getDisplayName() || "Seller";
 
   bindEvents();
   renderAll();
   loadCategoryOptions();
-  syncSellerOrders();
+  loadDashboard();
+  loadAnalytics();
 });
 
-/** Refresh the fulfilment list from the backend (best effort; the
- *  local cache is kept when the backend is unavailable). */
-async function syncSellerOrders() {
-  try {
-    await syncOrders({ scope: "seller" });
-  } catch (error) {
-    console.warn(
-      "[seller] could not sync orders from the backend:",
-      error?.message || error
-    );
+/** Load products, summary and orders from the backend. Any failure
+ *  surfaces a dashboard error instead of silently falling back to
+ *  cached or seeded data. */
+async function loadDashboard() {
+  const [products, summary, orders] = await Promise.allSettled([
+    syncSellerProducts(),
+    getSellerSummary(),
+    syncSellerOrders({ throwOnError: true }),
+  ]);
+
+  if (summary.status === "fulfilled") {
+    dashboardSummary = summary.value;
   }
+
   renderAll();
+
+  const failed = [products, summary, orders].filter(
+    (result) => result.status === "rejected"
+  );
+  if (failed.length > 0) {
+    showDashboardError(failed[0].reason?.message);
+  }
+}
+
+/** Show the top-level error banner with the first failure message. */
+function showDashboardError(message) {
+  if (!page.dashboardError) return;
+  if (message && page.dashboardErrorMessage) {
+    page.dashboardErrorMessage.textContent = message;
+  }
+  page.dashboardError.hidden = false;
 }
 
 function bindEvents() {
@@ -156,15 +208,23 @@ function bindEvents() {
       openModal("confirm");
     }
   });
-  $("[data-confirm-delete]").addEventListener("click", () => {
+  $("[data-confirm-delete]").addEventListener("click", async () => {
     if (deleteTargetId == null) return;
-    const removed = deleteProduct(deleteTargetId);
+    const id = deleteTargetId;
     deleteTargetId = null;
     closeModal("confirm");
-    if (removed) {
+    try {
+      await deleteProduct(id);
       showToast({ title: "Product deleted", type: "info" });
-      renderAll();
+    } catch (error) {
+      showToast({
+        title: "Delete failed",
+        message:
+          error?.message || "The product could not be deleted. Please try again.",
+        type: "error",
+      });
     }
+    renderAll();
   });
 
   // Product form submit
@@ -217,11 +277,20 @@ function renderAll() {
 /* ---- Stats ---- */
 
 function renderStats() {
-  const stats = getSellerStats();
+  const stats = dashboardSummary;
+  if (!stats) {
+    page.statProducts.textContent = "—";
+    page.statActiveOrders.textContent = "—";
+    page.statPendingOrders.textContent = "—";
+    page.statRevenue.textContent = "—";
+    return;
+  }
+  const activeOrders =
+    stats.totalOrders - stats.deliveredOrders - stats.cancelledOrders;
   page.statProducts.textContent = String(stats.totalProducts);
-  page.statActiveOrders.textContent = String(stats.activeOrders);
+  page.statActiveOrders.textContent = String(Math.max(0, activeOrders));
   page.statPendingOrders.textContent = String(stats.pendingOrders);
-  page.statRevenue.textContent = formatCurrency(stats.revenue);
+  page.statRevenue.textContent = formatCurrency(stats.totalRevenue);
 }
 
 /* ---- Products ---- */
@@ -310,7 +379,7 @@ function openProductModal(product = null) {
   openModal("product");
 }
 
-function saveProduct(event) {
+async function saveProduct(event) {
   event.preventDefault();
   const form = page.productForm;
   clearFieldErrors(form);
@@ -338,21 +407,30 @@ function saveProduct(event) {
     imageUrl: values.imageUrl.trim(),
   };
 
-  const product = id
-    ? updateProduct(id, payload)
-    : createProduct(payload);
+  setSubmitState(form, true);
+  try {
+    const product = id
+      ? await updateProduct(id, payload)
+      : await createProduct(payload);
 
-  closeModal("product");
-  form.reset();
+    closeModal("product");
+    form.reset();
 
-  if (product) {
     showToast({
       title: id ? "Product updated" : "Product added",
       message: `${product.name} is saved.`,
       type: "success",
     });
-    renderProducts();
-    renderStats();
+    renderAll();
+  } catch (error) {
+    showToast({
+      title: "Save failed",
+      message:
+        error?.message || "The product could not be saved. Please try again.",
+      type: "error",
+    });
+  } finally {
+    setSubmitState(form, false);
   }
 }
 
@@ -402,6 +480,88 @@ function selectProductCategory(form, name) {
     select.appendChild(option);
   }
   select.value = name;
+}
+
+/* ---- Analytics ---- */
+
+/** Load the analytics panels from the backend. Failures surface the
+ *  analytics error banner instead of fabricated numbers. */
+async function loadAnalytics() {
+  try {
+    const [top, categories, timeline] = await Promise.all([
+      getTopProducts(10),
+      getSalesByCategory(),
+      getRevenueTimeline(30),
+    ]);
+    renderAnalytics(top, categories, timeline);
+  } catch (error) {
+    if (page.analyticsErrorMessage) {
+      page.analyticsErrorMessage.textContent =
+        error?.message || "Sales analytics could not be loaded right now.";
+    }
+    if (page.analyticsError) page.analyticsError.hidden = false;
+  }
+}
+
+function renderAnalytics(top = [], categories = [], timeline = []) {
+  renderAnalyticsTable(
+    page.topProductsWrap,
+    page.topProductsList,
+    page.topProductsEmpty,
+    top,
+    topProductRowTemplate
+  );
+  renderAnalyticsTable(
+    page.categorySalesWrap,
+    page.categorySalesList,
+    page.categorySalesEmpty,
+    categories,
+    categorySalesRowTemplate
+  );
+  renderAnalyticsTable(
+    page.timelineWrap,
+    page.timelineList,
+    page.timelineEmpty,
+    timeline,
+    timelineRowTemplate
+  );
+}
+
+/** Toggle a table + its empty placeholder for one analytics panel. */
+function renderAnalyticsTable(wrap, list, empty, rows, template) {
+  const isEmpty = !Array.isArray(rows) || rows.length === 0;
+  if (wrap) wrap.hidden = isEmpty;
+  if (empty) empty.hidden = !isEmpty;
+  if (list) list.innerHTML = rows.map(template).join("");
+}
+
+function topProductRowTemplate(item = {}) {
+  return `
+    <tr>
+      <td>${escapeHtml(item.name || "Product")}</td>
+      <td>${Number(item.quantitySold) || 0}</td>
+      <td class="u-text-right">${formatCurrency(item.revenue)}</td>
+    </tr>
+  `;
+}
+
+function categorySalesRowTemplate(item = {}) {
+  return `
+    <tr>
+      <td>${escapeHtml(item.categoryName || "Uncategorised")}</td>
+      <td>${Number(item.quantitySold) || 0}</td>
+      <td class="u-text-right">${formatCurrency(item.revenue)}</td>
+    </tr>
+  `;
+}
+
+function timelineRowTemplate(point = {}) {
+  return `
+    <tr>
+      <td>${escapeHtml(point.date || "—")}</td>
+      <td class="u-text-right">${formatCurrency(point.amount)}</td>
+    </tr>
+  `;
 }
 
 /* ---- Orders ---- */

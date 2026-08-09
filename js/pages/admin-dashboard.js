@@ -196,24 +196,40 @@ function bindEvents() {
   });
 
   // Product visibility changes
-  page.productsList.addEventListener("change", (event) => {
+  page.productsList.addEventListener("change", async (event) => {
     const select = event.target.closest("[data-status]");
     if (!select) return;
 
-    const product = updateProductStatus(select.dataset.status, select.value);
-    if (product) {
-      showToast({
-        title: "Visibility updated",
-        message: `${product.name} is now ${product.status.toLowerCase()}.`,
-        type: "success",
-      });
-    } else {
-      renderProducts();
+    select.disabled = true;
+    try {
+      const product = await updateProductStatus(
+        select.dataset.status,
+        select.value
+      );
+      if (product) {
+        showToast({
+          title: "Visibility updated",
+          message: `${product.name} is now ${product.status.toLowerCase()}.`,
+          type: "success",
+        });
+      } else {
+        showToast({
+          title: "Update failed",
+          message: "The product could not be updated.",
+          type: "error",
+        });
+      }
+    } catch (error) {
       showToast({
         title: "Update failed",
-        message: "The product could not be updated.",
+        message:
+          error?.message || "The product could not be updated.",
         type: "error",
       });
+    } finally {
+      renderProducts();
+      renderStats();
+      select.disabled = false;
     }
   });
 }

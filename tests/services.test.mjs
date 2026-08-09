@@ -90,7 +90,11 @@ const run = async () => {
     ["orders.sellerOrders", "/orders/seller"],
     ["orders.adminOrders", "/orders/admin"],
     ["seller.orders", "/orders/seller"],
-    ["seller.analytics", "/seller/analytics"],
+    ["seller.updateOrderStatus", "/orders/{id}/status"],
+    ["seller.analytics.summary", "/seller/analytics/summary"],
+    ["seller.analytics.topProducts", "/seller/analytics/top-products"],
+    ["seller.analytics.salesByCategory", "/seller/analytics/sales-by-category"],
+    ["seller.analytics.revenueTimeline", "/seller/analytics/revenue-timeline"],
     ["admin.analytics", "/admin/analytics"],
   ];
   for (const [key, path] of exact) {
@@ -324,6 +328,133 @@ const run = async () => {
         success: true,
         message: "Order status updated",
         data: orderResponse({ status: body?.status }),
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+
+    /* Spring Boot seller backend (Phase 10D) */
+    const productResponse = (overrides = {}) => ({
+      id: 1,
+      name: "Test Widget",
+      description: "A QA widget",
+      price: 19.99,
+      stock: 12,
+      sku: "TW-001",
+      imageUrl: "https://example.com/w.jpg",
+      status: "ACTIVE",
+      categoryId: 2,
+      categoryName: "Electronics",
+      sellerId: 900,
+      sellerName: "Jane Doe",
+      averageRating: 4.5,
+      reviewCount: 7,
+      createdAt: "2026-08-07T00:00:00",
+      updatedAt: "2026-08-07T00:00:00",
+      ...overrides,
+    });
+
+    if (method === "GET" && pathname.endsWith("/api/v1/products/mine")) {
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: { content: [productResponse()], page: 0, size: 20, totalElements: 1, totalPages: 1, last: true },
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+    if (method === "POST" && pathname.endsWith("/api/v1/products")) {
+      if (body?.sku === "DUP") {
+        return jsonResponse(
+          { success: false, message: "A product with SKU 'DUP' already exists", data: null, timestamp: "2026-08-07T00:00:00Z" },
+          { status: 409 }
+        );
+      }
+      return jsonResponse(
+        {
+          success: true,
+          message: "Product created successfully",
+          data: productResponse({
+            name: body.name,
+            description: body.description,
+            price: body.price,
+            stock: body.stock,
+            sku: body.sku,
+            imageUrl: body.imageUrl,
+            status: body.status,
+            categoryId: body.categoryId,
+          }),
+          timestamp: "2026-08-07T00:00:00Z",
+        },
+        { status: 201 }
+      );
+    }
+    if (method === "PUT" && /\/api\/v1\/products\/\d+$/.test(pathname)) {
+      const id = Number(pathname.match(/\/(\d+)$/)[1]);
+      return jsonResponse({
+        success: true,
+        message: "Product updated successfully",
+        data: productResponse({ id, name: body.name, price: body.price, sku: body.sku, status: body.status }),
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+    if (method === "DELETE" && /\/api\/v1\/products\/\d+$/.test(pathname)) {
+      return jsonResponse({
+        success: true,
+        message: "Product deleted successfully",
+        data: null,
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+
+    if (method === "GET" && pathname.endsWith("/api/v1/seller/analytics/summary")) {
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: {
+          totalProducts: 5,
+          activeProducts: 4,
+          lowStockProducts: 1,
+          totalOrders: 10,
+          pendingOrders: 3,
+          shippedOrders: 2,
+          deliveredOrders: 4,
+          cancelledOrders: 1,
+          totalItemsSold: 25,
+          totalRevenue: 499.95,
+          averageRating: 4.4,
+        },
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+    if (method === "GET" && pathname.endsWith("/api/v1/seller/analytics/top-products")) {
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: [
+          { productId: 1, productName: "Test Widget", quantitySold: 12, revenue: 239.88 },
+          { productId: 2, productName: "Fancy Mug", quantitySold: 5, revenue: 74.95 },
+        ],
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+    if (method === "GET" && pathname.endsWith("/api/v1/seller/analytics/sales-by-category")) {
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: [
+          { categoryId: 2, categoryName: "Electronics", quantitySold: 20, revenue: 399.8 },
+          { categoryId: 3, categoryName: "Home & Living", quantitySold: 5, revenue: 100.15 },
+        ],
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+    if (method === "GET" && pathname.endsWith("/api/v1/seller/analytics/revenue-timeline")) {
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: [
+          { date: "2026-08-07", amount: 49.99 },
+          { date: "2026-08-08", amount: 12.5 },
+        ],
         timestamp: "2026-08-07T00:00:00Z",
       });
     }
@@ -705,7 +836,7 @@ const run = async () => {
   });
 
   /* ==========================================================
-     [I] Seller service (local) + enum alignment
+     [I] Seller service (Spring Boot backend) + enum alignment
      ========================================================== */
   section("sellerService");
   const seller = await import(app("js/services/sellerService.js"));
@@ -713,23 +844,140 @@ const run = async () => {
   check(seller.PRODUCT_STATUS.INACTIVE === "INACTIVE", "PRODUCT_STATUS.INACTIVE");
   check(seller.PRODUCT_STATUS.DRAFT === undefined, "no legacy DRAFT status");
 
-  const seeds = seller.getSellerProducts();
-  check(seeds.length >= 6, "seed catalogue present");
-  const created = seller.createProduct({ name: "QA Widget", price: 5, status: "ACTIVE" });
-  check(created.id > 0 && created.name === "QA Widget", "createProduct assigns id + fields");
-  const updatedProd = seller.updateProduct(created.id, { price: 6 });
-  check(updatedProd?.price === 6, "updateProduct merges fields");
-  check(seller.deleteProduct(created.id) === true, "deleteProduct removes");
+  // The backend is authoritative: no seed/demo catalogue is stored and
+  // reads start empty until the first successful sync.
+  globalThis.window.localStorage.removeItem("marketplace.seller.products");
+  check(seller.getSellerProducts().length === 0, "no seed/demo catalogue is stored");
 
-  globalThis.window.localStorage.setItem("marketplace.orders", JSON.stringify([
-    { id: 1, orderNumber: "A", status: "PENDING", total: 10, createdAt: new Date().toISOString() },
-    { id: 2, orderNumber: "B", status: "CONFIRMED", total: 20, createdAt: new Date().toISOString() },
-    { id: 3, orderNumber: "C", status: "CANCELLED", total: 30, createdAt: new Date().toISOString() },
-  ]));
-  const stats = seller.getSellerStats();
-  check(stats.pendingOrders === 2, "pendingOrders = PENDING + CONFIRMED only");
-  check(stats.activeOrders === 2, "activeOrders excludes CANCELLED/DELIVERED");
-  check(stats.revenue === 30, "revenue excludes CANCELLED");
+  // Signed-in SELLER session is already active from the orders tests.
+  const syncedProducts = await seller.syncSellerProducts();
+  check(Array.isArray(syncedProducts) && syncedProducts.length === 1, "syncSellerProducts fetches /products/mine");
+  const mineReq = requests.find((r) => r.url.includes("/api/v1/products/mine"));
+  check(mineReq?.headers?.Authorization === "Bearer TOK-1", "seller product sync sends the Supabase token as Bearer");
+  check(seller.getSellerProduct(1)?.name === "Test Widget", "synced products are cached for the dashboard");
+  check(seller.getSellerProduct(1)?.category === "Electronics", "categoryName maps to the UI category field");
+  check(seller.getSellerProduct(1)?.categoryId === 2, "categoryId is kept");
+  check(seller.getSellerProduct(1)?.sku === "TW-001", "SKU is kept");
+  check(seller.getSellerProduct(1)?.rating === 4.5 && seller.getSellerProduct(1)?.reviewsCount === 7, "averageRating/reviewCount map to rating/reviewsCount");
+  check(seller.getSellerProduct(1)?.oldPrice === 0, "oldPrice reads back as 0 (not stored by the backend)");
+  check(seller.getSellerProduct(1)?.sellerId === 900, "backend sellerId is surfaced read-only");
+
+  // Create -> POST /products with only the ProductRequest fields.
+  const createStart = requests.length;
+  const created = await seller.createProduct({
+    name: "QA Widget",
+    description: "A widget",
+    price: 5,
+    oldPrice: 9,
+    stock: 3,
+    sku: "QA-001",
+    imageUrl: "https://example.com/qa.jpg",
+    category: "Electronics",
+    categoryId: 2,
+    status: "ACTIVE",
+  });
+  const createReq = requests[createStart];
+  check(createReq?.method === "POST" && createReq.url.includes("/api/v1/products"), "createProduct POSTs /api/v1/products");
+  const createBody = JSON.parse(createReq.body);
+  check(createBody.name === "QA Widget" && createBody.price === 5 && createBody.stock === 3, "createProduct sends name/price/stock");
+  check(createBody.sku === "QA-001", "createProduct sends sku");
+  check(createBody.categoryId === 2, "createProduct sends categoryId");
+  check(createBody.status === "ACTIVE", "createProduct sends status");
+  check(createBody.category === undefined && createBody.oldPrice === undefined, "createProduct never sends category name or oldPrice");
+  check(createBody.sellerId === undefined, "createProduct never sends a sellerId (backend derives owner)");
+  check(createReq.headers.Authorization === "Bearer TOK-1", "createProduct sends the auth token");
+  check(created.id === 1 && created.name === "QA Widget" && created.status === "ACTIVE", "createProduct unwraps the backend product");
+  check(seller.getSellerProduct(created.id)?.id === 1, "created product is cached for getSellerProduct");
+
+  // Update -> PUT /products/{id}.
+  const updatedProdDto = await seller.updateProduct(created.id, {
+    name: "QA Widget 2",
+    price: 6,
+    sku: "QA-002",
+    status: "INACTIVE",
+    categoryId: 2,
+  });
+  const updateReq = requests[requests.length - 1];
+  check(updateReq?.method === "PUT" && updateReq.url.includes("/api/v1/products/1"), "updateProduct PUTs /products/{id}");
+  check(JSON.parse(updateReq.body)?.sku === "QA-002" && JSON.parse(updateReq.body)?.status === "INACTIVE", "updateProduct sends the updated fields");
+  check(updatedProdDto?.name === "QA Widget 2" && updatedProdDto?.status === "INACTIVE", "updateProduct returns the mapped backend product");
+
+  // Delete -> DELETE /products/{id}.
+  const deleted = await seller.deleteProduct(created.id);
+  check(deleted === true, "deleteProduct resolves true");
+  check(requests[requests.length - 1].method === "DELETE" && requests[requests.length - 1].url.includes("/api/v1/products/1"), "deleteProduct DELETEs /products/{id}");
+  check(seller.getSellerProduct(created.id) === null, "deleted product is dropped from the cache");
+
+  // Backend errors surface - no local product is ever fabricated.
+  const cacheBeforeError = seller.getSellerProducts().length;
+  let conflictError = null;
+  try {
+    await seller.createProduct({ name: "Dup", sku: "DUP", price: 1, stock: 1, categoryId: 2 });
+  } catch (error) {
+    conflictError = error;
+  }
+  check(conflictError?.status === 409 && conflictError?.message.includes("already exists"), "backend rejection (409 SKU conflict) surfaces an error");
+  check(seller.getSellerProducts().length === cacheBeforeError, "failed create does not cache a local product");
+
+  // Authentication guard: signed-out seller operations reject 401 without a request.
+  auth.logout();
+  const signedOutRequestCount = requests.length;
+  let authError = null;
+  try {
+    await seller.syncSellerProducts();
+  } catch (error) {
+    authError = error;
+  }
+  check(authError?.status === 401, "signed-out seller sync rejects 401");
+  check(requests.length === signedOutRequestCount, "no backend request is made when signed out");
+
+  // Restore the session for the seller orders + analytics tests.
+  auth.setSession({
+    token: "TOK-1",
+    user: { id: "u1", firstName: "Jane", lastName: "Doe", email: "jane@t.com", role: "SELLER" },
+  });
+
+  // Seller orders delegate to the backend orders service.
+  const sellerOrder = await seller.syncSellerOrders();
+  check(Array.isArray(sellerOrder) && sellerOrder.length === 1, "syncSellerOrders pulls /orders/seller");
+  const sellerStatus = await seller.updateSellerOrderStatus(42, "SHIPPED");
+  check(sellerStatus?.status === "SHIPPED", "updateSellerOrderStatus advances status via the backend");
+
+  // Analytics summary.
+  const summary = await seller.getSellerSummary();
+  check(summary.totalProducts === 5 && summary.totalRevenue === 499.95, "getSellerSummary maps totalProducts + totalRevenue");
+  check(summary.pendingOrders === 3 && summary.deliveredOrders === 4 && summary.cancelledOrders === 1, "getSellerSummary maps order counters");
+  check(summary.totalItemsSold === 25 && summary.averageRating === 4.4, "getSellerSummary maps itemsSold + averageRating");
+
+  // Analytics panels.
+  const top = await seller.getTopProducts(5);
+  check(Array.isArray(top) && top.length === 2 && top[0].name === "Test Widget", "getTopProducts maps top products");
+  check(top[0].quantitySold === 12 && top[0].revenue === 239.88, "top product carries units + revenue");
+  check(requests[requests.length - 1].url.includes("limit=5"), "top products sends the limit param");
+
+  const categories = await seller.getSalesByCategory();
+  check(categories.length === 2 && categories[0].categoryName === "Electronics", "getSalesByCategory maps category sales");
+  check(categories[0].quantitySold === 20 && categories[0].revenue === 399.8, "category sales carry units + revenue");
+
+  const timeline = await seller.getRevenueTimeline(30);
+  check(timeline.length === 2 && timeline[0].date === "2026-08-07" && timeline[0].amount === 49.99, "getRevenueTimeline maps daily revenue");
+  check(requests[requests.length - 1].url.includes("days=30"), "revenue timeline sends the days param");
+
+  // Analytics also require a signed-in session.
+  auth.logout();
+  let analyticsAuthError = null;
+  try {
+    await seller.getSellerSummary();
+  } catch (error) {
+    analyticsAuthError = error;
+  }
+  check(analyticsAuthError?.status === 401, "signed-out analytics rejects 401");
+
+  // Restore a session for the later admin tests.
+  auth.setSession({
+    token: "TOK-1",
+    user: { id: "u1", firstName: "Jane", lastName: "Doe", email: "jane@t.com", role: "SELLER" },
+  });
 
   /* ==========================================================
      [J] Admin service (local)
@@ -745,7 +993,8 @@ const run = async () => {
   check(newCat?.name === "Phase 13 QA", "createCategory works");
   check(admin.createCategory("") === null, "createCategory rejects blank");
   check(admin.deleteCategory(newCat.id) === true, "deleteCategory works");
-  check(admin.updateProductStatus(1, "INACTIVE")?.status === "INACTIVE", "product moderation toggles status");
+  const moderated = await admin.updateProductStatus(1, "INACTIVE");
+  check(moderated?.status === "INACTIVE", "product moderation toggles status via the backend");
   const astats = admin.getAdminStats();
   check(astats.totalUsers === 5, "admin stats totalUsers");
 

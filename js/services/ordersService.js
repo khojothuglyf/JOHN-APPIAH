@@ -273,13 +273,17 @@ let syncPromise = null;
  *          "admin"            -> GET /api/v1/orders/admin
  *
  * Resolves the (mapped, cached) list. Signed-out sessions and backend
- * failures keep the existing local cache so dashboards still render.
+ * failures keep the existing local cache so dashboards still render;
+ * pass throwOnError: true to surface backend failures instead (the
+ * seller dashboard uses this to display an error rather than silently
+ * showing stale data).
  */
 export function syncOrders({
   scope = "buyer",
   page = 0,
   size = ORDERS_SYNC_SIZE,
   status = null,
+  throwOnError = false,
 } = {}) {
   if (!isSignedIn()) return Promise.resolve(getOrders());
   if (syncPromise) return syncPromise;
@@ -303,17 +307,21 @@ export function syncOrders({
       const mapped = content.map(mapOrder);
       setOrdersCache(mapped);
       return mapped;
-    })
-    .catch((error) => {
+    });
+
+  if (!throwOnError) {
+    syncPromise = syncPromise.catch((error) => {
       console.warn(
         "[orders] backend sync failed, keeping local cache:",
         error?.message || error
       );
       return getOrders();
-    })
-    .finally(() => {
-      syncPromise = null;
     });
+  }
+
+  syncPromise = syncPromise.finally(() => {
+    syncPromise = null;
+  });
 
   return syncPromise;
 }
