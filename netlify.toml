@@ -27,16 +27,17 @@
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
-# Static assets: short-lived browser cache; the service worker handles
-# longer-lived offline caching at runtime.
+# Static assets: always revalidate so app code (navbar/auth/login) is
+# never served stale after a deploy; the service worker handles
+# offline caching at runtime.
 [[headers]]
   for = "/css/*"
   [headers.values]
-    Cache-Control = "public, max-age=86400"
+    Cache-Control = "public, max-age=0, must-revalidate"
 [[headers]]
   for = "/js/*"
   [headers.values]
-    Cache-Control = "public, max-age=86400"
+    Cache-Control = "public, max-age=0, must-revalidate"
 [[headers]]
   for = "/images/*"
   [headers.values]

@@ -14,7 +14,7 @@
    committed values are the local-development set.
    ============================================================ */
 
-const VERSION = "1.0.0";
+const VERSION = "1.0.1";
 const CACHE_NAME = `marketplace-${VERSION}`;
 const RUNTIME_CACHE = "marketplace-runtime";
 const OFFLINE_URL = "/pages/offline.html";
@@ -163,7 +163,7 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((key) => key !== CACHE_NAME && key !== RUNTIME_CACHE)
+            .filter((key) => key !== CACHE_NAME)
             .map((key) => caches.delete(key))
         )
       )
