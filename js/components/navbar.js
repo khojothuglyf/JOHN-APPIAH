@@ -49,6 +49,7 @@ const SVG_ICONS = {
 const ROLE_DASHBOARD = {
   [USER_ROLES.ADMIN]: "pages/admin-dashboard.html",
   [USER_ROLES.SELLER]: "pages/seller-dashboard.html",
+  [USER_ROLES.BUYER]: "pages/buyer-dashboard.html",
 };
 
 export async function mountNavbar(root) {

@@ -296,6 +296,23 @@ const run = async () => {
     "forgotPassword calls /auth/v1/recover"
   );
 
+  check(
+    auth.getRoleLandingPath("BUYER") === "pages/buyer-dashboard.html",
+    "getRoleLandingPath(BUYER) -> buyer dashboard"
+  );
+  check(
+    auth.getRoleLandingPath("SELLER") === "pages/seller-dashboard.html",
+    "getRoleLandingPath(SELLER) -> seller dashboard"
+  );
+  check(
+    auth.getRoleLandingPath("ADMIN") === "pages/admin-dashboard.html",
+    "getRoleLandingPath(ADMIN) -> admin dashboard"
+  );
+  check(
+    auth.getRoleLandingPath(undefined) === "pages/buyer-dashboard.html",
+    "getRoleLandingPath(unknown) falls back to buyer dashboard"
+  );
+
   /* ==========================================================
      [D] Product service (PostgREST)
      ========================================================== */

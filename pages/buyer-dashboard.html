@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Dashboard | TradeSphere</title>
+    <meta name="description" content="Your TradeSphere shopping hub - orders, wishlist, cart and profile." />
+    <link rel="icon" href="../images/favicon.svg?v=ts-2" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../css/main.css" />
+    <link rel="stylesheet" href="../css/pages/buyer-dashboard.css" />
+      <!-- PWA-META -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#2f6fed" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="TradeSphere" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=ts-2" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="TradeSphere" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  </head>
+  <body>
+    <div data-component="navbar"></div>
+
+    <main id="main">
+      <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <span class="breadcrumb__item"><a href="../index.html">Home</a></span>
+          <span class="breadcrumb__item" aria-current="page">My Dashboard</span>
+        </nav>
+
+        <div class="page-header page-header__inner">
+          <div>
+            <h1 class="page-header__title">My Dashboard</h1>
+            <p class="page-header__subtitle">
+              Welcome back, <strong data-buyer-name></strong>. Here's your shopping hub.
+            </p>
+          </div>
+          <a class="btn btn--primary" href="products.html">Continue shopping</a>
+        </div>
+
+        <div class="stat-grid">
+          <a class="stat-card card" href="orders.html">
+            <span class="stat-card__icon stat-card__icon--info">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+            </span>
+            <div>
+              <p class="stat-card__label">My Orders</p>
+              <p class="stat-card__value">View all</p>
+            </div>
+          </a>
+          <a class="stat-card card" href="wishlist.html">
+            <span class="stat-card__icon stat-card__icon--primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </span>
+            <div>
+              <p class="stat-card__label">Wishlist</p>
+              <p class="stat-card__value">Saved items</p>
+            </div>
+          </a>
+          <a class="stat-card card" href="cart.html">
+            <span class="stat-card__icon stat-card__icon--warning">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+            </span>
+            <div>
+              <p class="stat-card__label">Cart</p>
+              <p class="stat-card__value">Checkout</p>
+            </div>
+          </a>
+          <a class="stat-card card" href="profile.html">
+            <span class="stat-card__icon stat-card__icon--success">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </span>
+            <div>
+              <p class="stat-card__label">Profile</p>
+              <p class="stat-card__value">Manage details</p>
+            </div>
+          </a>
+        </div>
+
+        <section aria-labelledby="recent-orders-title">
+          <div class="dashboard-toolbar">
+            <h2 class="dashboard-section-title" id="recent-orders-title">Recent orders <span data-recent-count></span></h2>
+            <a class="btn btn--ghost btn--sm" href="orders.html">View all orders</a>
+          </div>
+
+          <div class="buyer-orders" data-recent-orders></div>
+
+          <div class="page-placeholder" data-recent-empty hidden>
+            <span class="page-placeholder__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+            </span>
+            <h2 class="page-placeholder__title">No orders yet</h2>
+            <p class="page-placeholder__text">
+              When you place an order through checkout it will show up here.
+            </p>
+            <a class="btn btn--primary" href="products.html">Start shopping</a>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <div data-component="footer"></div>
+
+    <script type="module" src="../js/app.js"></script>
+    <script type="module" src="../js/pages/buyer-dashboard.js"></script>
+  </body>
+</html>

@@ -137,6 +137,17 @@ export function getRole() {
   return user?.role ? normalizeRole(user.role) : null;
 }
 
+/**
+ * Landing page for a role after sign-in. SELLER and ADMIN each get a
+ * dedicated dashboard; BUYER (and any unknown role) lands on the buyer
+ * dashboard. Paths are site-relative so callers wrap them with pageUrl().
+ */
+export function getRoleLandingPath(role) {
+  if (role === USER_ROLES.SELLER) return "pages/seller-dashboard.html";
+  if (role === USER_ROLES.ADMIN) return "pages/admin-dashboard.html";
+  return "pages/buyer-dashboard.html";
+}
+
 /** Persist a session after login / registration. */
 export function setSession({ token, user, refreshToken }) {
   if (token) storage.set(STORAGE_KEYS.token, token);

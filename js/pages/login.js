@@ -1,8 +1,8 @@
 /* ============================================================
    LOGIN PAGE SCRIPT
    Validates the form, calls authService.login and redirects to
-   the intended page (or home). Already-authenticated visitors
-   are sent home.
+   the intended page (or the role's dashboard). Already-authenticated
+   visitors are sent to their own role's dashboard.
    ============================================================ */
 
 import { $, getQueryParam, pageUrl } from "../utils/dom.js";
@@ -20,6 +20,8 @@ import {
   login,
   setSession,
   isAuthenticated,
+  getRole,
+  getRoleLandingPath,
 } from "../services/authService.js";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -27,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!form) return;
 
   if (isAuthenticated()) {
-    window.location.assign(pageUrl("index.html"));
+    window.location.assign(pageUrl(getRoleLandingPath(getRole())));
     return;
   }
 
@@ -64,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ? redirectTo.startsWith("/")
           ? redirectTo
           : pageUrl(redirectTo)
-        : pageUrl("index.html");
+        : pageUrl(getRoleLandingPath(getRole()));
       window.location.assign(target);
     } catch (error) {
       setSubmitState(form, false);

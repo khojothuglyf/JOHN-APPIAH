@@ -1,9 +1,13 @@
 /* ============================================================
    REGISTER PAGE SCRIPT
-   Validates the form, calls authService.register and sends the
-   new user to their role's landing page. Already-authenticated
-   visitors are sent home. Users pick an account type (Buyer by
-   default or Seller); no Admin signup option exists.
+   Validates the form, calls authService.register and - when an
+   active session exists - sends the new user to their role's
+   landing page. With Supabase email confirmation enabled the
+   signup returns no session, so the page shows a "check your
+   email" message and never redirects. Already-authenticated
+   visitors are sent to their role's dashboard. Users pick an
+   account type (Buyer by default or Seller); no Admin signup
+   option exists.
    ============================================================ */
 
 import { $, getQueryParam, pageUrl } from "../utils/dom.js";
@@ -21,15 +25,16 @@ import {
   register,
   setSession,
   isAuthenticated,
+  getRole,
+  getRoleLandingPath,
 } from "../services/authService.js";
-import { USER_ROLES } from "../config.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const form = $("#register-form");
   if (!form) return;
 
   if (isAuthenticated()) {
-    window.location.assign(pageUrl("index.html"));
+    window.location.assign(pageUrl(getRoleLandingPath(getRole())));
     return;
   }
 
@@ -92,25 +97,25 @@ document.addEventListener("DOMContentLoaded", () => {
         requestedRole,
       });
 
+      // Email confirmation: when no access token is returned there is
+      // no active session yet, so the user must verify their email
+      // before signing in. Show a clear success message and stay on
+      // the page - never redirect to a role dashboard without a session.
       if (!token) {
-        // Supabase email confirmation is enabled: tell the user to
-        // verify before they can sign in.
         setSubmitState(form, false);
         showAlert(
           form,
-          "We've sent a confirmation link to your email. Click it to activate your account, then sign in.",
+          "Check your email and confirm your account, then log in.",
           "Check your inbox"
         );
         return;
       }
 
+      // An active session means the account is ready to use: land on
+      // the role's dashboard (Buyer or Seller).
       setSession({ token, user });
 
-      const target =
-        user?.role === USER_ROLES.SELLER
-          ? pageUrl("pages/seller-dashboard.html")
-          : pageUrl("index.html");
-      window.location.assign(target);
+      window.location.assign(pageUrl(getRoleLandingPath(user?.role)));
     } catch (error) {
       setSubmitState(form, false);
       showAlert(form, error.message, "Registration failed");
