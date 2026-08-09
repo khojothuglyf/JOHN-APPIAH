@@ -28,10 +28,10 @@ export const PWA_BLOCK = `    <!-- PWA-META -->
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#2f6fed" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="application-name" content="Marketplace" />
+    <meta name="application-name" content="TradeSphere" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Marketplace" />
+    <meta name="apple-mobile-web-app-title" content="TradeSphere" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />`;
 
 export function injectPwaHead(html) {
@@ -45,10 +45,10 @@ export function seoBlockFor(pagePath, siteUrl) {
   return `    <!-- SEO-META -->
     <link rel="canonical" href="${url}" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Marketplace - Shop Smart, Live Better" />
+    <meta property="og:title" content="TradeSphere - Shop Smart, Live Better" />
     <meta property="og:description" content="A modern e-commerce marketplace connecting buyers and trusted sellers." />
     <meta property="og:url" content="${url}" />
-    <meta property="og:site_name" content="Marketplace" />`;
+    <meta property="og:site_name" content="TradeSphere" />`;
 }
 
 export function injectSeoHead(html, pagePath, siteUrl) {

@@ -1,5 +1,5 @@
 /* ============================================================
-   SERVICE WORKER - Marketplace PWA
+   SERVICE WORKER - TradeSphere PWA
    Offline support + app-shell caching.
    - Precache: the full app shell (HTML / CSS / JS / images /
      icons / shared components / manifest).

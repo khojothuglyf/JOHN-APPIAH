@@ -13,7 +13,7 @@ export {
   SUPABASE_ANON_KEY,
 } from "./api-config.js";
 
-export const APP_NAME = "Marketplace";
+export const APP_NAME = "TradeSphere";
 
 /**
  * True when the app is served from a local development origin
