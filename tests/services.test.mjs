@@ -95,14 +95,23 @@ const run = async () => {
     ["seller.analytics.topProducts", "/seller/analytics/top-products"],
     ["seller.analytics.salesByCategory", "/seller/analytics/sales-by-category"],
     ["seller.analytics.revenueTimeline", "/seller/analytics/revenue-timeline"],
-    ["admin.analytics", "/admin/analytics"],
+    ["admin.categories", "/categories"],
+    ["admin.createCategory", "/categories"],
+    ["admin.updateCategory", "/categories/{id}"],
+    ["admin.deleteCategory", "/categories/{id}"],
+    ["admin.users", "/admin/users"],
+    ["admin.updateUserRole", "/admin/users/{id}/role"],
+    ["admin.analytics.summary", "/admin/analytics/summary"],
+    ["admin.analytics.topProducts", "/admin/analytics/top-products"],
+    ["admin.analytics.salesByCategory", "/admin/analytics/sales-by-category"],
+    ["admin.analytics.revenueTimeline", "/admin/analytics/revenue-timeline"],
   ];
   for (const [key, path] of exact) {
     const entry = key.split(".").reduce((o, k) => o?.[k], API_ENDPOINTS);
     check(entry === path, `API_ENDPOINTS.${key} === ${path}`);
   }
 
-  const stillPlanned = ["auth.logout", "auth.me", "users.profile", "users.updateProfile", "users.changePassword", "admin.users", "admin.updateUserRole", "admin.products", "admin.updateProductStatus", "contact.send"];
+  const stillPlanned = ["auth.logout", "auth.me", "users.profile", "users.updateProfile", "users.changePassword", "contact.send"];
   for (const key of stillPlanned) {
     const entry = key.split(".").reduce((o, k) => o?.[k], API_ENDPOINTS);
     check(entry != null, `planned endpoint still declared: ${key}`);
@@ -448,6 +457,164 @@ const run = async () => {
       });
     }
     if (method === "GET" && pathname.endsWith("/api/v1/seller/analytics/revenue-timeline")) {
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: [
+          { date: "2026-08-07", amount: 49.99 },
+          { date: "2026-08-08", amount: 12.5 },
+        ],
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+
+    /* Spring Boot admin backend (Phase 10C) */
+    const userResponse = (overrides = {}) => ({
+      id: 1,
+      firstName: "Ada",
+      lastName: "Lovelace",
+      email: "ada@t.com",
+      role: "ADMIN",
+      createdAt: "2026-08-07T00:00:00",
+      ...overrides,
+    });
+
+    if (method === "GET" && pathname.endsWith("/api/v1/admin/users")) {
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: {
+          content: [
+            userResponse(),
+            userResponse({ id: 2, firstName: "Jane", lastName: "Doe", email: "jane@t.com", role: "SELLER" }),
+            userResponse({ id: 3, firstName: "Bob", lastName: "Buyer", email: "bob@t.com", role: "CUSTOMER" }),
+          ],
+          page: 0,
+          size: 100,
+          totalElements: 3,
+          totalPages: 1,
+          last: true,
+        },
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+    if (method === "PUT" && /\/api\/v1\/admin\/users\/\d+\/role$/.test(pathname)) {
+      const id = Number(pathname.match(/\/users\/(\d+)\/role$/)[1]);
+      if (id === 999) {
+        return jsonResponse(
+          { success: false, message: "User not found", data: null, timestamp: "2026-08-07T00:00:00Z" },
+          { status: 404 }
+        );
+      }
+      return jsonResponse({
+        success: true,
+        message: "Role updated",
+        data: userResponse({ id, role: body?.roleName }),
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+
+    const categoryResponse = (id, name, description, parentId, subcategories = []) => ({
+      id,
+      name,
+      description,
+      parentId,
+      subcategories,
+      createdAt: "2026-08-07T00:00:00",
+      updatedAt: "2026-08-07T00:00:00",
+    });
+    if (method === "GET" && pathname.endsWith("/api/v1/categories")) {
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: [
+          categoryResponse(1, "Electronics", "Gadgets", null, [categoryResponse(2, "Headphones", "", 1)]),
+          categoryResponse(3, "Home & Living", "", null),
+        ],
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+    if (method === "POST" && pathname.endsWith("/api/v1/categories")) {
+      if (body?.name === "DUP") {
+        return jsonResponse(
+          { success: false, message: "A category named 'DUP' already exists", data: null, timestamp: "2026-08-07T00:00:00Z" },
+          { status: 409 }
+        );
+      }
+      return jsonResponse(
+        {
+          success: true,
+          message: "Category created successfully",
+          data: categoryResponse(10, body?.name, body?.description || "", null),
+          timestamp: "2026-08-07T00:00:00Z",
+        },
+        { status: 201 }
+      );
+    }
+    if (method === "PUT" && /\/api\/v1\/categories\/\d+$/.test(pathname)) {
+      const id = Number(pathname.match(/\/categories\/(\d+)$/)[1]);
+      return jsonResponse({
+        success: true,
+        message: "Category updated successfully",
+        data: categoryResponse(id, body?.name, body?.description || "", null),
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+    if (method === "DELETE" && /\/api\/v1\/categories\/\d+$/.test(pathname)) {
+      return jsonResponse({
+        success: true,
+        message: "Category deleted successfully",
+        data: null,
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+
+    if (method === "GET" && pathname.endsWith("/api/v1/admin/analytics/summary")) {
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: {
+          totalUsers: 3,
+          totalSellers: 1,
+          totalCustomers: 2,
+          totalProducts: 5,
+          activeProducts: 4,
+          lowStockProducts: 1,
+          totalOrders: 10,
+          pendingOrders: 3,
+          shippedOrders: 2,
+          deliveredOrders: 4,
+          cancelledOrders: 1,
+          totalReviews: 12,
+          completedPayments: 8,
+          totalRevenue: 1299.5,
+        },
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+    if (method === "GET" && pathname.endsWith("/api/v1/admin/analytics/top-products")) {
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: [
+          { productId: 1, productName: "Test Widget", quantitySold: 12, revenue: 239.88 },
+          { productId: 2, productName: "Fancy Mug", quantitySold: 5, revenue: 74.95 },
+        ],
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+    if (method === "GET" && pathname.endsWith("/api/v1/admin/analytics/sales-by-category")) {
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: [
+          { categoryId: 2, categoryName: "Electronics", quantitySold: 20, revenue: 399.8 },
+          { categoryId: 3, categoryName: "Home & Living", quantitySold: 5, revenue: 100.15 },
+        ],
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+    if (method === "GET" && pathname.endsWith("/api/v1/admin/analytics/revenue-timeline")) {
       return jsonResponse({
         success: true,
         message: "ok",
@@ -980,23 +1147,161 @@ const run = async () => {
   });
 
   /* ==========================================================
-     [J] Admin service (local)
+     [J] Admin service (Spring Boot backend)
      ========================================================== */
   section("adminService");
   const admin = await import(app("js/services/adminService.js"));
-  check(admin.getUsers().length === 5, "seed users present");
-  const promoted = admin.updateUserRole(4, "SELLER");
-  check(promoted?.role === "SELLER", "updateUserRole changes role");
-  check(admin.updateUserRole(4, "NOPE") === null, "updateUserRole rejects bad role");
-  check(admin.getCategories().length === 7, "seed categories from DEFAULT_CATEGORIES");
-  const newCat = admin.createCategory("Phase 13 QA");
-  check(newCat?.name === "Phase 13 QA", "createCategory works");
-  check(admin.createCategory("") === null, "createCategory rejects blank");
-  check(admin.deleteCategory(newCat.id) === true, "deleteCategory works");
+
+  // The backend is authoritative: no seed/demo admin data is stored
+  // and reads start empty until the first successful sync.
+  globalThis.window.localStorage.removeItem("marketplace.admin.users");
+  globalThis.window.localStorage.removeItem("marketplace.admin.categories");
+  check(admin.getUsers().length === 0, "no seed users are stored");
+  check(admin.getCategories().length === 0, "no seed categories are stored");
+
+  // Admin operations require a signed-in ADMIN session.
+  auth.logout();
+  let signedOutAdminError = null;
+  try {
+    await admin.syncUsers();
+  } catch (error) {
+    signedOutAdminError = error;
+  }
+  check(signedOutAdminError?.status === 401, "signed-out admin sync rejects 401");
+
+  // Non-admin sessions are rejected locally before any request.
+  auth.setSession({
+    token: "TOK-1",
+    user: { id: "u2", firstName: "Jane", lastName: "Doe", email: "jane@t.com", role: "SELLER" },
+  });
+  const before403 = requests.length;
+  let roleGuardError = null;
+  try {
+    await admin.syncUsers();
+  } catch (error) {
+    roleGuardError = error;
+  }
+  check(roleGuardError?.status === 403, "non-admin sync rejects 403");
+  check(requests.length === before403, "403 is enforced locally without a request");
+
+  // Restore the ADMIN session for the sync tests.
+  auth.setSession({
+    token: "TOK-1",
+    user: { id: "u1", firstName: "Ada", lastName: "Lovelace", email: "ada@t.com", role: "ADMIN" },
+  });
+
+  // Users load from GET /admin/users (paged) with role reconciliation.
+  const users = await admin.syncUsers();
+  check(Array.isArray(users) && users.length === 3, "syncUsers fetches paged platform users");
+  check(users[0].role === "ADMIN" && users[1].role === "SELLER", "backend ADMIN/SELLER roles map to UI roles");
+  check(users[2].role === "BUYER", "backend CUSTOMER maps to UI BUYER");
+  const usersReq = requests.find((r) => r.url.includes("/api/v1/admin/users"));
+  check(usersReq?.headers?.Authorization === "Bearer TOK-1", "admin user sync sends the Supabase token as Bearer");
+  check(admin.getUsers().length === 3, "synced users are cached for the dashboard");
+
+  // Role change -> PUT /admin/users/{id}/role with { roleName }.
+  const promoteStart = requests.length;
+  const promoted = await admin.updateUserRole(3, "SELLER");
+  const promoteReq = requests[promoteStart];
+  check(promoteReq?.method === "PUT" && promoteReq.url.includes("/api/v1/admin/users/3/role"), "updateUserRole PUTs /admin/users/{id}/role");
+  check(JSON.parse(promoteReq.body)?.roleName === "SELLER", "role change sends { roleName }");
+  check(promoted?.role === "SELLER", "updateUserRole returns the mapped backend user");
+  check(admin.getUsers().find((u) => u.id === 3)?.role === "SELLER", "updated user is cached");
+
+  // BUYER -> CUSTOMER outbound mapping.
+  const demoteStart = requests.length;
+  await admin.updateUserRole(3, "BUYER");
+  check(JSON.parse(requests[demoteStart].body)?.roleName === "CUSTOMER", "UI BUYER maps to backend CUSTOMER outbound");
+
+  check(await admin.updateUserRole(3, "NOPE") === null, "updateUserRole rejects bad role without a request");
+
+  // Self-demotion is blocked locally to mirror the backend rule.
+  let selfDemoteError = null;
+  try {
+    await admin.updateUserRole(auth.getCurrentUser().id, "BUYER");
+  } catch (error) {
+    selfDemoteError = error;
+  }
+  check(selfDemoteError?.status === 400 && selfDemoteError?.message.includes("own role"), "self-demotion is rejected with 400");
+
+  // Unknown users surface the backend 404.
+  let missingUserError = null;
+  try {
+    await admin.updateUserRole(999, "SELLER");
+  } catch (error) {
+    missingUserError = error;
+  }
+  check(missingUserError?.status === 404, "unknown user surfaces a backend 404");
+
+  // Product moderation reuses PUT /products/{id}.
+  const adminProducts = await admin.syncAdminProducts();
+  check(Array.isArray(adminProducts) && adminProducts.length === 1, "syncAdminProducts pulls the platform catalogue");
   const moderated = await admin.updateProductStatus(1, "INACTIVE");
   check(moderated?.status === "INACTIVE", "product moderation toggles status via the backend");
-  const astats = admin.getAdminStats();
-  check(astats.totalUsers === 5, "admin stats totalUsers");
+  check(requests[requests.length - 1].url.includes("/api/v1/products/1"), "moderation PUTs /products/{id}");
+  check(await admin.updateProductStatus(1, "NOPE") === null, "updateProductStatus rejects bad status without a request");
+
+  // Categories load from GET /categories (nested response flattened).
+  const adminCats = await admin.syncCategories();
+  check(Array.isArray(adminCats) && adminCats.length === 3, "syncCategories flattens nested backend categories");
+  check(adminCats[0].name === "Electronics" && adminCats[1].name === "Headphones", "subcategories are flattened into the UI list");
+  check(requests.find((r) => r.url.includes("/api/v1/categories") && r.method === "GET")?.url.includes("/api/v1/categories"), "categories load via GET /categories");
+  check(admin.getCategories().length === 3, "synced categories are cached");
+  check(admin.getCategories().find((c) => c.name === "Electronics")?.productCount === 1, "category product counts derive from the catalogue");
+
+  // Create -> POST /categories; blank names are rejected without a request.
+  const createCatStart = requests.length;
+  const newCat = await admin.createCategory("Phase 13 QA");
+  check(requests[createCatStart]?.method === "POST" && requests[createCatStart].url.includes("/api/v1/categories"), "createCategory POSTs /categories");
+  check(JSON.parse(requests[createCatStart].body)?.name === "Phase 13 QA", "createCategory sends the name");
+  check(newCat?.name === "Phase 13 QA", "createCategory returns the mapped backend category");
+  check(admin.getCategories().length === 4, "created category is cached");
+  check(await admin.createCategory("") === null, "createCategory rejects blank names without a request");
+
+  // Duplicate names surface the backend 409.
+  let dupCatError = null;
+  try {
+    await admin.createCategory("DUP");
+  } catch (error) {
+    dupCatError = error;
+  }
+  check(dupCatError?.status === 409 && dupCatError?.message.includes("already exists"), "duplicate category surfaces a 409");
+
+  // Delete -> DELETE /categories/{id}.
+  const deletedCat = await admin.deleteCategory(newCat.id);
+  check(deletedCat === true, "deleteCategory resolves true");
+  check(requests[requests.length - 1].method === "DELETE" && requests[requests.length - 1].url.includes(`/api/v1/categories/${newCat.id}`), "deleteCategory DELETEs /categories/{id}");
+  check(admin.getCategories().length === 3, "deleted category is dropped from the cache");
+
+  // Admin orders reuse the backend order scope.
+  const adminOrders = await admin.syncAdminOrders();
+  check(Array.isArray(adminOrders) && adminOrders.length === 1, "syncAdminOrders pulls /orders/admin");
+  check(requests[requests.length - 1].url.includes("/api/v1/orders/admin"), "admin order sync targets /orders/admin");
+  const adminStatus = await admin.updateAdminOrderStatus(42, "DELIVERED");
+  check(adminStatus?.status === "DELIVERED", "updateAdminOrderStatus advances status via the backend");
+
+  // Admin analytics.
+  const asummary = await admin.getAdminSummary();
+  check(asummary.totalUsers === 3 && asummary.totalRevenue === 1299.5, "getAdminSummary maps platform totals");
+  check(asummary.totalOrders === 10 && asummary.pendingOrders === 3, "getAdminSummary maps order counters");
+  check(asummary.totalReviews === 12 && asummary.completedPayments === 8, "getAdminSummary maps reviews + payments");
+
+  const atop = await admin.getTopProducts(10);
+  check(Array.isArray(atop) && atop[0].name === "Test Widget", "getTopProducts maps top products");
+  check(requests[requests.length - 1].url.includes("limit=10"), "top products sends the limit param");
+
+  const acats = await admin.getSalesByCategory();
+  check(acats.length === 2 && acats[0].categoryName === "Electronics", "getSalesByCategory maps category sales");
+
+  const atl = await admin.getRevenueTimeline(30);
+  check(atl.length === 2 && atl[0].amount === 49.99, "getRevenueTimeline maps daily revenue");
+  check(requests[requests.length - 1].url.includes("days=30"), "revenue timeline sends the days param");
+
+  // Restore a session for the later profile tests.
+  auth.setSession({
+    token: "TOK-1",
+    user: { id: "u1", firstName: "Jane", lastName: "Doe", email: "jane@t.com", role: "SELLER" },
+  });
 
   /* ==========================================================
      [K] Profile service (local)

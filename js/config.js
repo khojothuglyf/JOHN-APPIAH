@@ -121,14 +121,16 @@ export const API_ENDPOINTS = {
   admin: {
     categories: "/categories",
     createCategory: "/categories",
-    // analytics family: /admin/analytics/summary, /top-products,
-    // /sales-by-category, /revenue-timeline
-    analytics: "/admin/analytics",
-    // planned: no backend endpoints yet
+    updateCategory: "/categories/{id}",
+    deleteCategory: "/categories/{id}",
     users: "/admin/users",
     updateUserRole: "/admin/users/{id}/role",
-    products: "/admin/products",
-    updateProductStatus: "/admin/products/{id}/status",
+    analytics: {
+      summary: "/admin/analytics/summary",
+      topProducts: "/admin/analytics/top-products",
+      salesByCategory: "/admin/analytics/sales-by-category",
+      revenueTimeline: "/admin/analytics/revenue-timeline",
+    },
   },
   contact: {
     // planned: no backend endpoints yet

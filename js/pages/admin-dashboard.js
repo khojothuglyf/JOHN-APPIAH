@@ -1,11 +1,17 @@
 /* ============================================================
    ADMIN DASHBOARD PAGE SCRIPT
    ADMIN-only platform management:
-   - stats overview (users, products, orders, revenue)
-   - user role management
-   - category creation / deletion
-   - product visibility moderation (ACTIVE / INACTIVE)
-   Access is restricted to the ADMIN role.
+   - stats overview (users, products, orders, revenue) from the
+     backend admin summary
+   - user role management via /admin/users/{id}/role
+   - category CRUD via the backend /categories endpoints
+   - order fulfilment via /orders/admin + /orders/{id}/status
+   - product visibility moderation (ACTIVE / INACTIVE) via
+     PUT /products/{id}
+   - platform analytics (top products, category sales, revenue
+     timeline) from /admin/analytics
+   Access is restricted to the ADMIN role. Backend failures surface
+   an error banner - no admin data is fabricated or seeded locally.
    ============================================================ */
 
 import { $, escapeHtml, pageUrl, redirect } from "../utils/dom.js";
@@ -13,15 +19,25 @@ import { formatCurrency, formatDate } from "../utils/format.js";
 import { getCurrentUser, getRole, getDisplayName, isAuthenticated, signInPreview } from "../services/authService.js";
 import { USER_ROLES, isPreviewMode } from "../config.js";
 import { PRODUCT_STATUS } from "../services/sellerService.js";
+import { ORDER_STATUS, getOrderStatusLabel } from "../services/ordersService.js";
 import {
   getUsers,
+  syncUsers,
   updateUserRole,
   getCategories,
+  syncCategories,
   createCategory,
   deleteCategory,
   getAdminProducts,
+  syncAdminProducts,
   updateProductStatus,
-  getAdminStats,
+  getAdminOrders,
+  syncAdminOrders,
+  updateAdminOrderStatus,
+  getAdminSummary,
+  getTopProducts,
+  getSalesByCategory,
+  getRevenueTimeline,
 } from "../services/adminService.js";
 import { showToast } from "../components/toast.js";
 
@@ -39,6 +55,8 @@ const page = {
   insightGrowth: null,
   insightActiveProducts: null,
   insightOrders: null,
+  dashboardError: null,
+  dashboardErrorMessage: null,
   usersTable: null,
   usersList: null,
   usersEmpty: null,
@@ -53,7 +71,24 @@ const page = {
   productsEmpty: null,
   productsCount: null,
   productSearch: null,
+  ordersTable: null,
+  ordersList: null,
+  ordersEmpty: null,
+  ordersCount: null,
+  analyticsError: null,
+  analyticsErrorMessage: null,
+  topProductsWrap: null,
+  topProductsList: null,
+  topProductsEmpty: null,
+  categorySalesWrap: null,
+  categorySalesList: null,
+  categorySalesEmpty: null,
+  timelineWrap: null,
+  timelineList: null,
+  timelineEmpty: null,
 };
+
+let adminSummary = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!isAuthenticated()) {
@@ -87,6 +122,8 @@ document.addEventListener("DOMContentLoaded", () => {
   page.insightGrowth = $("[data-insight-growth]");
   page.insightActiveProducts = $("[data-insight-active-products]");
   page.insightOrders = $("[data-insight-orders]");
+  page.dashboardError = $("[data-dashboard-error]");
+  page.dashboardErrorMessage = $("[data-dashboard-error-message]");
   page.usersTable = $("[data-users-table]");
   page.usersList = $("[data-users-list]");
   page.usersEmpty = $("[data-users-empty]");
@@ -101,13 +138,65 @@ document.addEventListener("DOMContentLoaded", () => {
   page.productsEmpty = $("[data-products-empty]");
   page.productsCount = $("[data-products-count]");
   page.productSearch = $("[data-product-search]");
+  page.ordersTable = $("[data-orders-table]");
+  page.ordersList = $("[data-orders-list]");
+  page.ordersEmpty = $("[data-orders-empty]");
+  page.ordersCount = $("[data-orders-count]");
+  page.analyticsError = $("[data-analytics-error]");
+  page.analyticsErrorMessage = $("[data-analytics-error-message]");
+  page.topProductsWrap = $("[data-top-products-wrap]");
+  page.topProductsList = $("[data-top-products-list]");
+  page.topProductsEmpty = $("[data-top-products-empty]");
+  page.categorySalesWrap = $("[data-category-sales-wrap]");
+  page.categorySalesList = $("[data-category-sales-list]");
+  page.categorySalesEmpty = $("[data-category-sales-empty]");
+  page.timelineWrap = $("[data-timeline-wrap]");
+  page.timelineList = $("[data-timeline-list]");
+  page.timelineEmpty = $("[data-timeline-empty]");
   page.activityList = $("[data-activity-list]");
 
   $("[data-admin-name]").textContent = getDisplayName() || "Admin";
 
   bindEvents();
-  renderAll();
+  loadDashboard();
+  loadAnalytics();
 });
+
+/** Load users, categories, products, orders and the platform summary
+ *  from the backend. Any failure surfaces a dashboard error instead
+ *  of silently falling back to cached or seeded data. */
+async function loadDashboard() {
+  const [users, categories, products, orders, summary] =
+    await Promise.allSettled([
+      syncUsers(),
+      syncCategories(),
+      syncAdminProducts(),
+      syncAdminOrders(),
+      getAdminSummary(),
+    ]);
+
+  if (summary.status === "fulfilled") {
+    adminSummary = summary.value;
+  }
+
+  renderAll();
+
+  const failed = [users, categories, products, orders, summary].filter(
+    (result) => result.status === "rejected"
+  );
+  if (failed.length > 0) {
+    showDashboardError(failed[0].reason?.message);
+  }
+}
+
+/** Show the top-level error banner with the first failure message. */
+function showDashboardError(message) {
+  if (!page.dashboardError) return;
+  if (message && page.dashboardErrorMessage) {
+    page.dashboardErrorMessage.textContent = message;
+  }
+  page.dashboardError.hidden = false;
+}
 
 function bindEvents() {
   document.querySelectorAll("[data-tab]").forEach((tab) => {
@@ -118,7 +207,7 @@ function bindEvents() {
   page.productSearch?.addEventListener("input", renderProducts);
 
   // Category form
-  page.categoriesForm.addEventListener("submit", (event) => {
+  page.categoriesForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     const input = $("[data-category-name]", page.categoriesForm);
     const name = input?.value.trim();
@@ -130,50 +219,66 @@ function bindEvents() {
       });
       return;
     }
-    const category = createCategory(name);
-    if (!category) {
+    try {
+      const category = await createCategory(name);
+      if (!category) {
+        showToast({
+          title: "Category not added",
+          message: "That category could not be created.",
+          type: "warning",
+        });
+        return;
+      }
+      input.value = "";
       showToast({
-        title: "Category not added",
-        message: "That category already exists.",
-        type: "warning",
-      });
-      return;
-    }
-    input.value = "";
-    showToast({
-      title: "Category added",
-      message: `${category.name} was created.`,
-      type: "success",
-    });
-    renderCategories();
-    renderStats();
-  });
-
-  // User role changes
-  page.usersList.addEventListener("change", (event) => {
-    const select = event.target.closest("[data-role]");
-    if (!select) return;
-
-    const user = updateUserRole(select.dataset.role, select.value);
-    if (user) {
-      showToast({
-        title: "Role updated",
-        message: `${user.email} is now ${user.role.toLowerCase()}.`,
+        title: "Category added",
+        message: `${category.name} was created.`,
         type: "success",
       });
+      renderCategories();
       renderStats();
-    } else {
-      renderUsers();
+    } catch (error) {
       showToast({
-        title: "Update failed",
-        message: "The user's role could not be changed.",
+        title: "Category not added",
+        message:
+          error?.message || "The category could not be created.",
         type: "error",
       });
     }
   });
 
+  // User role changes
+  page.usersList.addEventListener("change", async (event) => {
+    const select = event.target.closest("[data-role]");
+    if (!select) return;
+
+    select.disabled = true;
+    try {
+      const user = await updateUserRole(select.dataset.role, select.value);
+      if (user) {
+        showToast({
+          title: "Role updated",
+          message: `${user.email} is now ${user.role.toLowerCase()}.`,
+          type: "success",
+        });
+        renderStats();
+      }
+    } catch (error) {
+      showToast({
+        title: "Update failed",
+        message:
+          error?.message || "The user's role could not be changed.",
+        type: "error",
+      });
+    } finally {
+      renderUsers();
+      renderStats();
+      select.disabled = false;
+    }
+  });
+
   // Category deletion (two-step confirm)
-  page.categoriesList.addEventListener("click", (event) => {
+  page.categoriesList.addEventListener("click", async (event) => {
     const button = event.target.closest("[data-delete-category]");
     if (!button) return;
 
@@ -187,11 +292,18 @@ function bindEvents() {
       return;
     }
 
-    const removed = deleteCategory(button.dataset.deleteCategory);
-    if (removed) {
+    try {
+      await deleteCategory(button.dataset.deleteCategory);
       showToast({ title: "Category deleted", type: "info" });
       renderCategories();
       renderStats();
+    } catch (error) {
+      showToast({
+        title: "Delete failed",
+        message:
+          error?.message || "The category could not be deleted.",
+        type: "error",
+      });
     }
   });
 
@@ -232,6 +344,38 @@ function bindEvents() {
       select.disabled = false;
     }
   });
+
+  // Order status changes
+  page.ordersList.addEventListener("change", async (event) => {
+    const select = event.target.closest("[data-order-status]");
+    if (!select) return;
+
+    select.disabled = true;
+    try {
+      const order = await updateAdminOrderStatus(
+        select.dataset.orderStatus,
+        select.value
+      );
+      if (order) {
+        showToast({
+          title: "Order status updated",
+          message: `${order.orderNumber || `#${order.id}`} is now ${getOrderStatusLabel(order.status).toLowerCase()}.`,
+          type: "success",
+        });
+      }
+    } catch (error) {
+      showToast({
+        title: "Update failed",
+        message:
+          error?.message || "The order status could not be changed.",
+        type: "error",
+      });
+    } finally {
+      renderOrders();
+      renderStats();
+      select.disabled = false;
+    }
+  });
 }
 
 function renderAll() {
@@ -240,31 +384,33 @@ function renderAll() {
   renderUsers();
   renderCategories();
   renderProducts();
+  renderOrders();
 }
 
 /* ---- Executive overview ---- */
 
 function renderExecutiveOverview() {
-  const stats = getAdminStats();
+  const stats = adminSummary;
   const users = getUsers();
   const products = getAdminProducts();
   const activeProducts = products.filter((product) => product.status === PRODUCT_STATUS.ACTIVE).length;
+  const totalUsers = stats?.totalUsers ?? users.length;
   const pendingReview = Math.max(0, products.length - activeProducts);
-  const healthScore = Math.min(98, Math.max(74, Math.round(72 + stats.totalUsers * 2 + activeProducts * 1.5 - pendingReview)));
+  const healthScore = Math.min(98, Math.max(74, Math.round(72 + totalUsers * 2 + activeProducts * 1.5 - pendingReview)));
   const status = healthScore >= 90 ? "Excellent" : healthScore >= 80 ? "Strong" : "Needs attention";
 
   if (page.heroHealth) page.heroHealth.textContent = `${healthScore}%`;
   if (page.heroStatus) page.heroStatus.textContent = status;
   if (page.healthProgress) page.healthProgress.style.width = `${healthScore}%`;
   if (page.healthCopy) {
-    page.healthCopy.textContent = `${activeProducts} products are live, ${pendingReview} need attention, and ${stats.totalUsers} accounts are active.`;
+    page.healthCopy.textContent = `${activeProducts} products are live, ${pendingReview} need attention, and ${totalUsers} accounts are active.`;
   }
 
   if (page.insightGrowth) {
-    page.insightGrowth.textContent = `+${Math.min(28, Math.max(8, stats.totalUsers + 3))}%`;
+    page.insightGrowth.textContent = `+${Math.min(28, Math.max(8, totalUsers + 3))}%`;
   }
   if (page.insightActiveProducts) page.insightActiveProducts.textContent = String(activeProducts);
-  if (page.insightOrders) page.insightOrders.textContent = String(stats.totalOrders);
+  if (page.insightOrders) page.insightOrders.textContent = String(stats?.totalOrders ?? getAdminOrders().length);
 
   if (page.activityList) {
     renderActivityList(users, products);
@@ -273,7 +419,7 @@ function renderExecutiveOverview() {
 
 function renderActivityList(users = [], products = []) {
   const latestUsers = [...users]
-    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .sort((a, b) => Number(b.id || 0) - Number(a.id || 0))
     .slice(0, 3);
   const latestProducts = [...products]
     .sort((a, b) => Number(b.id || 0) - Number(a.id || 0))
@@ -315,11 +461,18 @@ function renderActivityList(users = [], products = []) {
 /* ---- Stats ---- */
 
 function renderStats() {
-  const stats = getAdminStats();
+  const stats = adminSummary;
+  if (!stats) {
+    page.statUsers.textContent = "—";
+    page.statProducts.textContent = "—";
+    page.statOrders.textContent = "—";
+    page.statRevenue.textContent = "—";
+    return;
+  }
   page.statUsers.textContent = String(stats.totalUsers);
   page.statProducts.textContent = String(stats.totalProducts);
   page.statOrders.textContent = String(stats.totalOrders);
-  page.statRevenue.textContent = formatCurrency(stats.revenue);
+  page.statRevenue.textContent = formatCurrency(stats.totalRevenue);
 }
 
 /* ---- Users ---- */
@@ -484,6 +637,130 @@ function productModRowTemplate(product = {}) {
           ${statusOptions}
         </select>
       </td>
+    </tr>
+  `;
+}
+
+/* ---- Orders (fulfilment) ---- */
+
+function renderOrders() {
+  const orders = getAdminOrders();
+  page.ordersCount.textContent = `(${orders.length})`;
+
+  if (orders.length === 0) {
+    page.ordersTable.hidden = true;
+    page.ordersEmpty.hidden = false;
+    return;
+  }
+
+  page.ordersTable.hidden = false;
+  page.ordersEmpty.hidden = true;
+  page.ordersList.innerHTML = orders.map(orderRowTemplate).join("");
+}
+
+function orderRowTemplate(order = {}) {
+  const label = order.orderNumber || `#${order.id}`;
+  const statusOptions = Object.values(ORDER_STATUS)
+    .map(
+      (status) =>
+        `<option value="${status}" ${order.status === status ? "selected" : ""}>${getOrderStatusLabel(status).toLowerCase()}</option>`
+    )
+    .join("");
+
+  return `
+    <tr>
+      <td>${escapeHtml(label)}</td>
+      <td>${escapeHtml(order.customerName || "—")}</td>
+      <td>${escapeHtml(formatDate(order.createdAt) || "—")}</td>
+      <td class="admin-product__price">${formatCurrency(order.total)}</td>
+      <td class="u-text-right">
+        <select class="form-select form-select--sm" data-order-status="${escapeHtml(order.id)}"
+          aria-label="Status for ${escapeHtml(label)}">
+          ${statusOptions}
+        </select>
+      </td>
+    </tr>
+  `;
+}
+
+/* ---- Analytics ---- */
+
+/** Load the analytics panels from the backend. Failures surface the
+ *  analytics error banner instead of fabricated numbers. */
+async function loadAnalytics() {
+  try {
+    const [top, categories, timeline] = await Promise.all([
+      getTopProducts(10),
+      getSalesByCategory(),
+      getRevenueTimeline(30),
+    ]);
+    renderAnalytics(top, categories, timeline);
+  } catch (error) {
+    if (page.analyticsErrorMessage) {
+      page.analyticsErrorMessage.textContent =
+        error?.message || "Sales analytics could not be loaded right now.";
+    }
+    if (page.analyticsError) page.analyticsError.hidden = false;
+  }
+}
+
+function renderAnalytics(top = [], categories = [], timeline = []) {
+  renderAnalyticsTable(
+    page.topProductsWrap,
+    page.topProductsList,
+    page.topProductsEmpty,
+    top,
+    topProductRowTemplate
+  );
+  renderAnalyticsTable(
+    page.categorySalesWrap,
+    page.categorySalesList,
+    page.categorySalesEmpty,
+    categories,
+    categorySalesRowTemplate
+  );
+  renderAnalyticsTable(
+    page.timelineWrap,
+    page.timelineList,
+    page.timelineEmpty,
+    timeline,
+    timelineRowTemplate
+  );
+}
+
+/** Toggle a table + its empty placeholder for one analytics panel. */
+function renderAnalyticsTable(wrap, list, empty, rows, template) {
+  const isEmpty = !Array.isArray(rows) || rows.length === 0;
+  if (wrap) wrap.hidden = isEmpty;
+  if (empty) empty.hidden = !isEmpty;
+  if (list) list.innerHTML = rows.map(template).join("");
+}
+
+function topProductRowTemplate(item = {}) {
+  return `
+    <tr>
+      <td>${escapeHtml(item.name || "Product")}</td>
+      <td>${Number(item.quantitySold) || 0}</td>
+      <td class="u-text-right">${formatCurrency(item.revenue)}</td>
+    </tr>
+  `;
+}
+
+function categorySalesRowTemplate(item = {}) {
+  return `
+    <tr>
+      <td>${escapeHtml(item.categoryName || "Uncategorised")}</td>
+      <td>${Number(item.quantitySold) || 0}</td>
+      <td class="u-text-right">${formatCurrency(item.revenue)}</td>
+    </tr>
+  `;
+}
+
+function timelineRowTemplate(point = {}) {
+  return `
+    <tr>
+      <td>${escapeHtml(point.date || "—")}</td>
+      <td class="u-text-right">${formatCurrency(point.amount)}</td>
     </tr>
   `;
 }
