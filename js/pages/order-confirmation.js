@@ -1,12 +1,16 @@
 /* ============================================================
    ORDER CONFIRMATION PAGE SCRIPT
    Loads the order created during checkout by its id from the
-   query string and renders a success summary. Shows a friendly
+   query string and renders a success summary. When the browser
+   returns from the Paystack hosted checkout (with ?reference=..
+   &trxref=..) the payment is first verified against the backend so
+   the summary reflects the real gateway outcome. Shows a friendly
    "not found" state when the order id is missing or unknown.
    ============================================================ */
 
 import { $, getQueryParam } from "../utils/dom.js";
-import { getOrder, getOrderById } from "../services/ordersService.js";
+import { getOrder, getOrderById, recordPaymentForOrder } from "../services/ordersService.js";
+import { verifyPayment } from "../services/paymentService.js";
 import {
   orderHeaderTemplate,
   orderItemsTemplate,
@@ -24,6 +28,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!page.confirmation) return;
 
   const orderId = getQueryParam("id");
+  const reference = getQueryParam("reference") || getQueryParam("trxref");
+
+  // Returning from the Paystack hosted checkout: confirm the payment
+  // against the backend so the rendered status is the real outcome.
+  // Best-effort - if verification fails the order still renders and
+  // the payment status refreshes on the next sync.
+  if (orderId && reference) {
+    try {
+      const verified = await verifyPayment(orderId);
+      if (verified) recordPaymentForOrder(orderId, verified);
+    } catch {
+      // ignored - the order below still renders
+    }
+  }
 
   // Prefer the order cached during checkout; fall back to fetching it
   // from the backend (e.g. after a page refresh or from another tab).

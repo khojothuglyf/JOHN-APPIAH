@@ -4,11 +4,12 @@
    payment details, validates them and places the order with the
    Spring Boot backend. Only supabaseProductId + quantity and the
    shipping details are sent - the backend computes all prices and
-   totals. The payment is then recorded against the returned order
-   via the payments API (card completes instantly, cash on delivery
-   stays pending). On success the backend order is cached and the
-   cart is cleared before redirecting to the confirmation page. If
-   the backend is unavailable no local order is created.
+   totals. The payment is then initialized against the returned order
+   via the payments API (online methods return a Paystack hosted
+   checkout URL to redirect to; cash on delivery stays pending). On
+   success the backend order is cached and the cart is cleared before
+   leaving to complete payment or the confirmation page. If the backend
+   is unavailable no local order is created.
    ============================================================ */
 
 import { $, escapeHtml, pageUrl, redirect } from "../utils/dom.js";
@@ -28,7 +29,7 @@ import {
 } from "../services/ordersService.js";
 import {
   BACKEND_PAYMENT_METHODS,
-  payForOrder,
+  initializePayment,
 } from "../services/paymentService.js";
 import { getCurrentUser, isAuthenticated } from "../services/authService.js";
 import { showToast } from "../components/toast.js";
@@ -40,7 +41,6 @@ const page = {
   empty: null,
   page: null,
   paymentMethod: null,
-  cardFields: null,
   summaryItems: null,
   summarySubtotal: null,
   summaryTotal: null,
@@ -51,7 +51,6 @@ document.addEventListener("DOMContentLoaded", () => {
   page.empty = $("[data-checkout-empty]");
   page.page = $("[data-checkout-page]");
   page.paymentMethod = $("[data-payment-method]");
-  page.cardFields = $("[data-card-fields]");
   page.summaryItems = $("[data-summary-items]");
   page.summarySubtotal = $("[data-summary-subtotal]");
   page.summaryTotal = $("[data-summary-total]");
@@ -70,38 +69,10 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function bindEvents() {
-  page.paymentMethod?.addEventListener("change", updatePaymentMethod);
-  updatePaymentMethod();
-
-  const cardNumber = $("[data-card-number]", page.form);
-  const expiry = $("[data-card-expiry]", page.form);
-  const cvc = $("[data-card-cvc]", page.form);
-
-  cardNumber?.addEventListener("input", () => {
-    const digits = cardNumber.value.replace(/\D/g, "").slice(0, 16);
-    cardNumber.value = digits.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
-  });
-
-  expiry?.addEventListener("input", () => {
-    let digits = expiry.value.replace(/\D/g, "").slice(0, 4);
-    if (digits.length > 2) digits = `${digits.slice(0, 2)}/${digits.slice(2)}`;
-    expiry.value = digits;
-  });
-
-  cvc?.addEventListener("input", () => {
-    cvc.value = cvc.value.replace(/\D/g, "").slice(0, 4);
-  });
-
   page.form.addEventListener("submit", (event) => {
     event.preventDefault();
     placeOrder();
   });
-}
-
-/** Show/hide card fields when the payment method changes. */
-function updatePaymentMethod() {
-  const isCard = page.paymentMethod?.value === PAYMENT_METHODS.CARD;
-  if (page.cardFields) page.cardFields.hidden = !isCard;
 }
 
 /** Prefill the email from the signed-in user, if any. */
@@ -143,7 +114,7 @@ async function placeOrder() {
   clearFieldErrors(page.form);
 
   const values = readFormData(page.form);
-  const errors = validate(values, buildRules(values.paymentMethod));
+  const errors = validate(values, buildRules());
 
   if (Object.keys(errors).length) {
     showFieldErrors(page.form, errors);
@@ -171,41 +142,45 @@ async function placeOrder() {
     country: values.country,
   };
 
-  const isCard = values.paymentMethod === PAYMENT_METHODS.CARD;
-
   try {
     // Only items (supabaseProductId + quantity) and the shipping
     // details are sent. The backend computes all prices and totals;
     // the returned order is the authoritative record.
     const order = await createOrder({ items: getCart(), shipping });
 
-    // Record the payment against the order. Card completes instantly
-    // on the backend; cash on delivery stays pending until delivery.
-    // payForOrder recovers idempotently when this order already has a
-    // payment (a retried checkout whose earlier response was lost).
+    // Initialize the payment against the order. Online methods return
+    // a Paystack hosted-checkout URL; cash on delivery stays pending.
+    // initializePayment recovers idempotently when this order already
+    // has a payment (a retried checkout whose earlier response was lost).
     let payment;
     try {
-      payment = await payForOrder(
+      payment = await initializePayment(
         order.id,
         BACKEND_PAYMENT_METHODS[values.paymentMethod]
       );
     } catch (error) {
       throw new Error(
         `Your order ${order.orderNumber || order.id} was created, but the ` +
-          `payment could not be recorded (${error?.message || "please try again"}). ` +
+          `payment could not be initialized (${error?.message || "please try again"}). ` +
           `Your cart has been kept so you can retry.`
       );
     }
 
-    recordPaymentForOrder(order.id, {
-      ...payment,
-      last4: isCard ? values.cardNumber.replace(/\D/g, "").slice(-4) : null,
-    });
+    recordPaymentForOrder(order.id, payment);
 
     // The order and its payment are both recorded on the backend - only
     // now is the cart cleared. A failure above (or a backend rejection)
     // keeps the cart intact and never fabricates a local order.
     clearCart();
+
+    // Online payments are settled on Paystack's hosted checkout: send
+    // the browser there to complete payment. When Paystack returns
+    // (with ?reference=..&trxref=..) the confirmation page verifies it.
+    if (payment.authorizationUrl) {
+      window.location.assign(payment.authorizationUrl);
+      return;
+    }
+
     redirect("pages/order-confirmation.html", { id: order.id });
   } catch (error) {
     setSubmitState(page.form, false);
@@ -219,9 +194,9 @@ async function placeOrder() {
   }
 }
 
-/** Validation rules; card fields only apply when paying by card. */
-function buildRules(paymentMethod) {
-  const rules = {
+/** Validation rules for the delivery details and the payment method. */
+function buildRules() {
+  return {
     email: [validators.required, validators.email],
     firstName: [validators.required],
     lastName: [validators.required],
@@ -231,13 +206,4 @@ function buildRules(paymentMethod) {
     country: [validators.required],
     paymentMethod: [validators.required],
   };
-
-  if (paymentMethod === PAYMENT_METHODS.CARD) {
-    rules.cardName = [validators.required];
-    rules.cardNumber = [validators.required, validators.cardNumber];
-    rules.cardExpiry = [validators.required, validators.cardExpiry];
-    rules.cardCvc = [validators.required, validators.cardCvc];
-  }
-
-  return rules;
 }

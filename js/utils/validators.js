@@ -47,37 +47,6 @@ export const validators = {
 
   match: (otherField, otherLabel = "confirmation") => (value, values) =>
     value === values[otherField] ? "" : `Does not match ${otherLabel}.`,
-
-  cardNumber: (value) => {
-    const digits = String(value ?? "").replace(/\D/g, "");
-    if (!digits) return "";
-    return digits.length >= 15 && digits.length <= 16
-      ? ""
-      : "Enter a valid card number.";
-  },
-
-  cardExpiry: (value) => {
-    const clean = String(value ?? "").trim();
-    if (!clean) return "";
-    const match = clean.match(/^(\d{2})\s*\/\s*(\d{2})$/);
-    if (!match) return "Use MM/YY format.";
-    const month = Number(match[1]);
-    const year = 2000 + Number(match[2]);
-    if (month < 1 || month > 12) return "Enter a valid month.";
-    const now = new Date();
-    const expiry = new Date(year, month, 1);
-    return expiry.getTime() > now.getTime()
-      ? ""
-      : "This card has expired.";
-  },
-
-  cardCvc: (value) => {
-    const digits = String(value ?? "").replace(/\D/g, "");
-    if (!digits) return "";
-    return digits.length >= 3 && digits.length <= 4
-      ? ""
-      : "Enter a valid CVC.";
-  },
 };
 
 /**

@@ -159,55 +159,16 @@
                 </label>
                 <select class="form-select" id="checkout-payment-method"
                   name="paymentMethod" data-payment-method>
-                  <option value="CARD">Credit / debit card</option>
+                  <option value="CARD">Card, mobile money or bank transfer</option>
                   <option value="COD">Cash on delivery</option>
                 </select>
                 <p class="form-error" data-error></p>
               </div>
 
-              <div class="checkout-card-fields" data-card-fields>
-                <div class="form-group" data-field="cardName">
-                  <label class="form-label" for="checkout-card-name">
-                    Name on card <span class="form-required">*</span>
-                  </label>
-                  <input class="form-input" id="checkout-card-name" type="text"
-                    name="cardName" autocomplete="cc-name" placeholder="Full name as shown" />
-                  <p class="form-error" data-error></p>
-                </div>
-                <div class="form-group" data-field="cardNumber">
-                  <label class="form-label" for="checkout-card-number">
-                    Card number <span class="form-required">*</span>
-                  </label>
-                  <input class="form-input" id="checkout-card-number" type="text"
-                    name="cardNumber" inputmode="numeric" autocomplete="cc-number"
-                    placeholder="1234 5678 9012 3456" data-card-number />
-                  <p class="form-error" data-error></p>
-                </div>
-                <div class="checkout-grid checkout-grid--2">
-                  <div class="form-group" data-field="cardExpiry">
-                    <label class="form-label" for="checkout-card-expiry">
-                      Expiry <span class="form-required">*</span>
-                    </label>
-                    <input class="form-input" id="checkout-card-expiry" type="text"
-                      name="cardExpiry" inputmode="numeric" autocomplete="cc-exp"
-                      placeholder="MM/YY" data-card-expiry />
-                    <p class="form-error" data-error></p>
-                  </div>
-                  <div class="form-group" data-field="cardCvc">
-                    <label class="form-label" for="checkout-card-cvc">
-                      CVC <span class="form-required">*</span>
-                    </label>
-                    <input class="form-input" id="checkout-card-cvc" type="text"
-                      name="cardCvc" inputmode="numeric" autocomplete="cc-csc"
-                      placeholder="123" data-card-cvc />
-                    <p class="form-error" data-error></p>
-                  </div>
-                </div>
-              </div>
-
               <p class="form-hint">
-                This is a demo checkout. Card details are validated and used
-                only to mask the last four digits; nothing is stored or charged.
+                Online payments are processed on Paystack's secure hosted
+                checkout; you'll be redirected to complete payment. No card
+                details are entered or stored on this site.
               </p>
             </fieldset>
           </section>

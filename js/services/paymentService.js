@@ -2,33 +2,40 @@
    PAYMENT SERVICE - SPRING BOOT BACKEND (via http.js)
    ============================================================
    Records and reads payments against the backend. Checkout creates
-   the order first (ordersService.createOrder) and then records the
-   payment here via POST /api/v1/payments/orders/{orderId}. Only the
-   method is sent - the backend charges the order total, resolves the
-   status and generates the transaction reference. No card details or
-   gateway credentials ever leave the browser; there is no simulated
-   or fake payment flow anywhere in this service.
+   the order first (ordersService.createOrder) and then initializes
+   the payment here via POST /api/v1/payments/orders/{orderId}/initialize.
+   Only the method is sent - the backend charges the order total,
+   resolves the status, generates the transaction reference and (for
+   online methods) returns a Paystack hosted-checkout URL. No card
+   details or gateway credentials ever leave the browser: card / mobile
+   money / bank transfer details are collected by Paystack's hosted
+   checkout page, to which the browser is redirected.
 
    Backend contract (verified against PaymentController):
-   - POST /api/v1/payments/orders/{orderId}
+   - POST /api/v1/payments/orders/{orderId}/initialize
      REQUEST:  { method: CARD | BANK_TRANSFER | PAYPAL | CASH_ON_DELIVERY }
      RESPONSE: ApiResponse<PaymentResponse>  (201)
+   - POST /api/v1/payments/orders/{orderId}/verify   (confirm after return)
    - GET  /api/v1/payments/orders/{orderId}
    - GET  /api/v1/payments/my                  (buyer's own, paged)
 
    PaymentResponse: { id, orderId, orderNumber, amount, currency,
-     method, status, transactionRef, paidAt, createdAt }
+     method, status, transactionRef, provider, providerEventId,
+     providerChannel, authorizationUrl, accessCode, refundReference,
+     paidAt, createdAt }
    PaymentStatus: PENDING, COMPLETED, FAILED, REFUNDED.
 
    Method behaviour (backend-authoritative):
-   - CARD (and other online methods) complete instantly - the backend
-     records COMPLETED with a paidAt.
+   - Online methods initialize a Paystack session: the payment stays
+     PENDING and the response carries authorizationUrl (the hosted
+     checkout). The browser redirects there; when the gateway returns
+     with ?reference=..&trxref=.., verifyPayment confirms the result.
    - CASH_ON_DELIVERY stays PENDING; the backend completes it when the
      order is delivered.
    Recording is idempotent: a 409 means this order already has a
    payment (e.g. a retried checkout whose earlier response was lost),
-   so payForOrder recovers by reading the existing payment instead of
-   failing or fabricating a second one.
+   so initializePayment recovers by reading the existing payment
+   instead of failing or fabricating a second one.
    ============================================================ */
 
 import { ApiError, http } from "../utils/http.js";
@@ -41,6 +48,14 @@ export const PAYMENT_STATUS = {
   COMPLETED: "COMPLETED",
   FAILED: "FAILED",
   REFUNDED: "REFUNDED",
+};
+
+/** Payment processing backends (aligned with the backend
+ *  PaymentProvider constants). SIMULATED is the dev/COD fallback;
+ *  PAYSTACK processes real online payments via hosted checkout. */
+export const PAYMENT_PROVIDERS = {
+  PAYSTACK: "PAYSTACK",
+  SIMULATED: "SIMULATED",
 };
 
 /** Human-readable label for a payment status. */
@@ -62,6 +77,22 @@ export const BACKEND_PAYMENT_METHODS = {
   COD: "CASH_ON_DELIVERY",
 };
 
+/** Human-readable label for a Paystack payment channel. */
+export function getPaymentChannelLabel(channel) {
+  const labels = {
+    card: "Card",
+    mobile_money: "Mobile money",
+    bank_transfer: "Bank transfer",
+    bank: "Bank",
+    ussd: "USSD",
+    qr: "QR",
+    dedicated_account: "Bank account",
+    apple_pay: "Apple Pay",
+    google_pay: "Google Pay",
+  };
+  return labels[channel] || channel || "Online payment";
+}
+
 /** Map a backend PaymentResponse into the frontend payment shape. */
 function mapPayment(payment = {}) {
   return {
@@ -73,6 +104,12 @@ function mapPayment(payment = {}) {
     method: payment.method,
     status: payment.status,
     transactionRef: payment.transactionRef,
+    provider: payment.provider,
+    providerEventId: payment.providerEventId,
+    providerChannel: payment.providerChannel,
+    authorizationUrl: payment.authorizationUrl,
+    accessCode: payment.accessCode,
+    refundReference: payment.refundReference,
     paidAt: payment.paidAt,
     createdAt: payment.createdAt,
   };
@@ -84,16 +121,16 @@ function isSignedIn() {
 }
 
 /**
- * Record payment for an order. Only the method is sent; the backend
- * charges the order total and resolves the status (instant COMPLETED
- * for card, PENDING for cash on delivery). A 409 (this order already
- * has a payment) is recovered idempotently by reading the existing
- * payment, so a retried checkout never double-charges or fabricates a
- * second payment. Any other rejection throws and leaves the cart with
- * the caller to retry.
- * Backend: POST /api/v1/payments/orders/{orderId}.
+ * Initialize the payment for an order. Only the method is sent; the
+ * backend charges the order total and returns the payment with its
+ * status and (for online methods) the hosted-checkout authorizationUrl
+ * to redirect to. A 409 (this order already has a payment) is recovered
+ * idempotently by reading the existing payment, so a retried checkout
+ * never double-charges or fabricates a second payment. Any other
+ * rejection throws and leaves the cart with the caller to retry.
+ * Backend: POST /api/v1/payments/orders/{orderId}/initialize.
  */
-export async function payForOrder(orderId, method) {
+export async function initializePayment(orderId, method) {
   if (orderId == null) throw new ApiError(400, "Missing order id.");
   if (!method) throw new ApiError(400, "A payment method is required.");
   if (!isSignedIn()) {
@@ -102,7 +139,7 @@ export async function payForOrder(orderId, method) {
 
   try {
     const envelope = await http.post(
-      endpointPath(API_ENDPOINTS.payments.create, { orderId }),
+      endpointPath(API_ENDPOINTS.payments.initialize, { orderId }),
       { method }
     );
     return mapPayment(envelope?.data);
@@ -112,6 +149,25 @@ export async function payForOrder(orderId, method) {
     }
     throw error;
   }
+}
+
+/**
+ * Verify a payment against the backend - called when the browser
+ * returns from the hosted checkout with ?reference=..&trxref=.. so the
+ * confirmation page reflects the real gateway outcome. Safe to call
+ * for COD / already-final payments (the backend returns them as-is).
+ * Backend: POST /api/v1/payments/orders/{orderId}/verify.
+ */
+export async function verifyPayment(orderId) {
+  if (orderId == null) throw new ApiError(400, "Missing order id.");
+  if (!isSignedIn()) {
+    throw new ApiError(401, "Please sign in to verify a payment.");
+  }
+
+  const envelope = await http.post(
+    endpointPath(API_ENDPOINTS.payments.verify, { orderId })
+  );
+  return mapPayment(envelope?.data);
 }
 
 /** Read the payment recorded for an order (owner / seller / admin).

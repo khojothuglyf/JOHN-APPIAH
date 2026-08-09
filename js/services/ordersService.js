@@ -63,8 +63,8 @@ export const ORDER_STATUS = {
 };
 
 /** Payment methods offered at checkout. The order request itself
- *  does not carry a method; checkout records the payment separately
- *  against the backend (see paymentService.payForOrder). */
+ *  does not carry a method; checkout initializes the payment
+ *  separately against the backend (see paymentService.initializePayment). */
 export const PAYMENT_METHODS = {
   CARD: "CARD",
   COD: "COD",
@@ -193,7 +193,7 @@ function isSignedIn() {
  * Resolves the mapped backend order (cached for the confirmation
  * page). Throws when the backend is unreachable or rejects - no local
  * order is ever fabricated. The payment for the order is recorded in
- * a separate call (paymentService.payForOrder).
+ *  a separate call (paymentService.initializePayment).
  */
 export async function createOrder({ items = [], shipping = {} } = {}) {
   if (!isSignedIn()) {
@@ -226,8 +226,9 @@ export async function createOrder({ items = [], shipping = {} } = {}) {
 
 /** Attach a recorded backend payment to the cached order so the
  *  confirmation page and dashboards render the real payment status,
- *  method and reference. `payment` is the mapped PaymentResponse from
- *  paymentService (last4 is storefront-only and may be passed in). */
+ *  method, reference and provider. `payment` is the mapped
+ *  PaymentResponse from paymentService (last4 is storefront-only and
+ *  may be passed in). */
 export function recordPaymentForOrder(orderId, payment = {}) {
   const order = getOrderById(orderId);
   if (!order) return null;
@@ -236,6 +237,12 @@ export function recordPaymentForOrder(orderId, payment = {}) {
     last4: payment.last4 || null,
     status: payment.status,
     transactionRef: payment.transactionRef,
+    provider: payment.provider,
+    providerEventId: payment.providerEventId,
+    providerChannel: payment.providerChannel,
+    authorizationUrl: payment.authorizationUrl,
+    accessCode: payment.accessCode,
+    refundReference: payment.refundReference,
     paidAt: payment.paidAt,
   };
   return upsertOrderCache(order);

@@ -105,6 +105,8 @@ export const API_ENDPOINTS = {
   payments: {
     create: "/payments/orders/{orderId}",
     byOrder: "/payments/orders/{orderId}",
+    initialize: "/payments/orders/{orderId}/initialize",
+    verify: "/payments/orders/{orderId}/verify",
     my: "/payments/my",
     refund: "/payments/{paymentId}/refund",
   },

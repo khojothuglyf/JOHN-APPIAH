@@ -57,10 +57,6 @@
   grid-template-columns: 1fr;
 }
 
-.checkout-card-fields[hidden] {
-  display: none;
-}
-
 /* ---- Summary items ---- */
 .checkout-summary__items {
   display: flex;

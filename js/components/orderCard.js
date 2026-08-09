@@ -9,7 +9,9 @@ import { formatCurrency, formatDate } from "../utils/format.js";
 import { getOrderStatusLabel } from "../services/ordersService.js";
 import {
   BACKEND_PAYMENT_METHODS,
+  getPaymentChannelLabel,
   getPaymentStatusLabel,
+  PAYMENT_PROVIDERS,
 } from "../services/paymentService.js";
 
 const IMAGE_FALLBACK = pageUrl("images/placeholder.svg");
@@ -74,11 +76,16 @@ export function orderDetailsTemplate(order = {}) {
     .join(", ");
 
   // The payment method comes from the backend PaymentMethod enum:
-  // CARD or CASH_ON_DELIVERY (checkout only offers those two).
-  const isCard = order.payment?.method === BACKEND_PAYMENT_METHODS.CARD;
-  const methodText = isCard
-    ? `Card ending in ${order.payment.last4 || "••••"}`
-    : "Cash on delivery";
+  // CARD or CASH_ON_DELIVERY (checkout only offers those two). Online
+  // payments are processed by the backend provider: when Paystack was
+  // used, the channel from the gateway (card / mobile money / bank
+  // transfer) is shown instead of a card ending.
+  const isPaystack = order.payment?.provider === PAYMENT_PROVIDERS.PAYSTACK;
+  const methodText = isPaystack
+    ? getPaymentChannelLabel(order.payment.providerChannel)
+    : order.payment?.method === BACKEND_PAYMENT_METHODS.CARD
+      ? `Card ending in ${order.payment.last4 || "••••"}`
+      : "Cash on delivery";
   const statusText = order.payment?.status
     ? getPaymentStatusLabel(order.payment.status)
     : null;

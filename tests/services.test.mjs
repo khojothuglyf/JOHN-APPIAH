@@ -92,6 +92,8 @@ const run = async () => {
     ["orders.adminOrders", "/orders/admin"],
     ["payments.create", "/payments/orders/{orderId}"],
     ["payments.byOrder", "/payments/orders/{orderId}"],
+    ["payments.initialize", "/payments/orders/{orderId}/initialize"],
+    ["payments.verify", "/payments/orders/{orderId}/verify"],
     ["payments.my", "/payments/my"],
     ["payments.refund", "/payments/{paymentId}/refund"],
     ["seller.orders", "/orders/seller"],
@@ -355,10 +357,12 @@ const run = async () => {
       });
     }
 
-    /* Spring Boot payments backend (CARD completes, COD stays PENDING,
-       duplicate POST -> 409 so retried checkouts recover idempotently) */
-    if (method === "POST" && /\/api\/v1\/payments\/orders\/\d+$/.test(pathname)) {
-      const orderId = Number(pathname.match(/\/orders\/(\d+)$/)[1]);
+    /* Spring Boot payments backend (online initializes a hosted-checkout
+       session, COD stays PENDING; duplicate POST -> 409 so retried
+       checkouts recover idempotently; verify confirms pending online
+       payments) */
+    if (method === "POST" && /\/api\/v1\/payments\/orders\/\d+\/initialize$/.test(pathname)) {
+      const orderId = Number(pathname.match(/\/orders\/(\d+)\/initialize$/)[1]);
       if (orderId === 999) {
         return jsonResponse(
           { success: false, message: "Cannot pay for an order that is CANCELLED", data: null, timestamp: "2026-08-07T00:00:00Z" },
@@ -382,6 +386,9 @@ const run = async () => {
         method: body?.method,
         status: cod ? "PENDING" : "COMPLETED",
         transactionRef: `PAY-${String(paymentSeq).padStart(8, "0")}`,
+        provider: "SIMULATED",
+        providerChannel: null,
+        authorizationUrl: null,
         paidAt: cod ? null : "2026-08-09T10:00:00",
         createdAt: "2026-08-09T10:00:00",
       };
@@ -390,12 +397,34 @@ const run = async () => {
       return jsonResponse(
         {
           success: true,
-          message: "Payment processed",
+          message: "Payment initialized",
           data: payment,
           timestamp: "2026-08-07T00:00:00Z",
         },
         { status: 201 }
       );
+    }
+    if (method === "POST" && /\/api\/v1\/payments\/orders\/\d+\/verify$/.test(pathname)) {
+      const orderId = Number(pathname.match(/\/orders\/(\d+)\/verify$/)[1]);
+      const payment = paymentsByOrder.get(orderId);
+      if (!payment) {
+        return jsonResponse(
+          { success: false, message: "No payment found for order id: " + orderId, data: null, timestamp: "2026-08-07T00:00:00Z" },
+          { status: 404 }
+        );
+      }
+      // COD never completes on verify; pending online payments settle.
+      const confirmed =
+        payment.status === "PENDING" && payment.method !== "CASH_ON_DELIVERY"
+          ? { ...payment, status: "COMPLETED", paidAt: "2026-08-09T10:00:00" }
+          : payment;
+      paymentsByOrder.set(orderId, confirmed);
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: confirmed,
+        timestamp: "2026-08-07T00:00:00Z",
+      });
     }
     if (method === "GET" && /\/api\/v1\/payments\/orders\/\d+$/.test(pathname)) {
       const orderId = Number(pathname.match(/\/orders\/(\d+)$/)[1]);
@@ -1167,21 +1196,24 @@ const run = async () => {
   check(payment.getPaymentStatusLabel("FAILED") === "Payment failed", "FAILED label");
   check(payment.getPaymentStatusLabel("REFUNDED") === "Refunded", "REFUNDED label");
 
-  // COD initialization: POST /payments/orders/{id} with the backend
-  // method, resolved to a PENDING payment (completed only on delivery).
+  // COD initialization: POST /payments/orders/{id}/initialize with the
+  // backend method, resolved to a PENDING payment (completed only on
+  // delivery).
   const codOrder = await orders.createOrder({
     items: [{ productId: 7, name: "Headphones", price: 1, quantity: 2 }],
     shipping: { address: "1 Main St", city: "Springfield", zip: "62701", country: "US" },
   });
   const payStart = requests.length;
-  const codPayment = await payment.payForOrder(codOrder.id, payment.BACKEND_PAYMENT_METHODS.COD);
+  const codPayment = await payment.initializePayment(codOrder.id, payment.BACKEND_PAYMENT_METHODS.COD);
   const payReq = requests[payStart];
-  check(payReq?.method === "POST" && /\/api\/v1\/payments\/orders\/\d+$/.test(payReq.url), "payForOrder POSTs /payments/orders/{orderId}");
+  check(payReq?.method === "POST" && /\/api\/v1\/payments\/orders\/\d+\/initialize$/.test(payReq.url), "initializePayment POSTs /payments/orders/{orderId}/initialize");
   check(JSON.parse(payReq.body)?.method === "CASH_ON_DELIVERY", "COD sends only { method: CASH_ON_DELIVERY }");
   check(codPayment?.method === "CASH_ON_DELIVERY", "COD records the backend CASH_ON_DELIVERY method");
   check(codPayment?.status === "PENDING", "COD creates a PENDING payment");
   check(codPayment?.paidAt == null, "COD payment has no paidAt until delivery");
   check(typeof codPayment?.transactionRef === "string" && codPayment.transactionRef.startsWith("PAY-"), "COD payment carries a backend transaction reference");
+  check(codPayment?.provider === payment.PAYMENT_PROVIDERS.SIMULATED, "COD payment records the SIMULATED provider (no gateway involved)");
+  check(codPayment?.authorizationUrl == null, "COD payment has no hosted-checkout URL");
   check(codPayment?.amount === 99.98 && codPayment?.currency === "USD", "payment amount/currency come from the backend order");
 
   // Successful recording: the mapped payment is attached to the cached
@@ -1194,7 +1226,7 @@ const run = async () => {
   // idempotently by reading the existing payment - no second payment is
   // fabricated and the earlier CASH_ON_DELIVERY record wins.
   const dupStart = requests.length;
-  const dupPayment = await payment.payForOrder(codOrder.id, payment.BACKEND_PAYMENT_METHODS.CARD);
+  const dupPayment = await payment.initializePayment(codOrder.id, payment.BACKEND_PAYMENT_METHODS.CARD);
   check(requests[dupStart]?.method === "POST", "duplicate payment POSTs first");
   check(
     requests.slice(dupStart).some((r) => r.method === "GET" && /\/api\/v1\/payments\/orders\/\d+$/.test(r.url)),
@@ -1205,33 +1237,57 @@ const run = async () => {
     "recovery returns the existing COD payment, never a fabricated one"
   );
 
-  // A fresh order paid by card completes instantly on the backend.
+  // A fresh order paid online completes instantly with the simulated
+  // (dev) provider and carries no hosted-checkout URL.
   const cardOrder = await orders.createOrder({
     items: [{ productId: 7, name: "Headphones", price: 1, quantity: 2 }],
     shipping: { address: "2 Main St", city: "Springfield", zip: "62701", country: "US" },
   });
-  const cardPayment = await payment.payForOrder(cardOrder.id, payment.BACKEND_PAYMENT_METHODS.CARD);
+  const cardPayment = await payment.initializePayment(cardOrder.id, payment.BACKEND_PAYMENT_METHODS.CARD);
   check(cardPayment?.method === "CARD" && cardPayment?.status === "COMPLETED", "card payment completes instantly on the backend");
   check(cardPayment?.paidAt != null, "completed card payment carries a paidAt");
+  check(cardPayment?.provider === payment.PAYMENT_PROVIDERS.SIMULATED, "online payment records the SIMULATED provider when Paystack is unconfigured");
   const cardRecorded = orders.recordPaymentForOrder(cardOrder.id, { ...cardPayment, last4: "4242" });
   check(cardRecorded?.payment?.method === "CARD" && cardRecorded?.payment?.status === "COMPLETED", "recordPaymentForOrder attaches the completed card payment");
   check(orders.getOrderById(cardOrder.id)?.payment?.last4 === "4242", "storefront-only last4 rides along on the cached order");
 
+  // verifyPayment POSTs /verify; for COD (and final payments) the
+  // backend returns the payment as-is.
+  const verifyStart = requests.length;
+  const verifiedCod = await payment.verifyPayment(codOrder.id);
+  check(
+    requests[verifyStart]?.method === "POST" && /\/api\/v1\/payments\/orders\/\d+\/verify$/.test(requests[verifyStart].url),
+    "verifyPayment POSTs /payments/orders/{orderId}/verify"
+  );
+  check(
+    verifiedCod?.method === "CASH_ON_DELIVERY" && verifiedCod?.status === "PENDING",
+    "verifyPayment leaves COD payments pending"
+  );
+  check(payment.PAYMENT_PROVIDERS.PAYSTACK === "PAYSTACK", "PAYMENT_PROVIDERS.PAYSTACK is declared for hosted checkouts");
+  check(
+    payment.getPaymentChannelLabel("mobile_money") === "Mobile money",
+    "payment channels map to human-readable labels"
+  );
+  check(
+    payment.getPaymentChannelLabel("card") === "Card",
+    "Paystack card channel maps to a label"
+  );
+
   // Input validation is local (no backend request).
   const guardStart = requests.length;
   let missingId = null;
-  try { await payment.payForOrder(null, "CARD"); } catch (e) { missingId = e; }
-  check(missingId?.status === 400, "payForOrder rejects a missing order id");
+  try { await payment.initializePayment(null, "CARD"); } catch (e) { missingId = e; }
+  check(missingId?.status === 400, "initializePayment rejects a missing order id");
   check(requests.length === guardStart, "missing order id fails before any request");
   let missingMethod = null;
-  try { await payment.payForOrder(cardOrder.id, ""); } catch (e) { missingMethod = e; }
-  check(missingMethod?.status === 400, "payForOrder rejects a missing payment method");
+  try { await payment.initializePayment(cardOrder.id, ""); } catch (e) { missingMethod = e; }
+  check(missingMethod?.status === 400, "initializePayment rejects a missing payment method");
   check(requests.length === guardStart, "missing method fails before any request");
 
   // Backend rejections surface and never fabricate a payment or a local
   // order; the cached order simply keeps whatever it had.
   let payReject = null;
-  try { await payment.payForOrder(999, payment.BACKEND_PAYMENT_METHODS.CARD); } catch (e) { payReject = e; }
+  try { await payment.initializePayment(999, payment.BACKEND_PAYMENT_METHODS.CARD); } catch (e) { payReject = e; }
   check(payReject?.status === 400 && payReject?.message.includes("CANCELLED"), "backend payment rejection surfaces the error");
   const afterFailPayment = orders.getOrderById(cardOrder.id)?.payment;
   check(
@@ -1249,21 +1305,26 @@ const run = async () => {
   auth.logout();
   const signedOutStart = requests.length;
   let payAuthError = null;
-  try { await payment.payForOrder(cardOrder.id, payment.BACKEND_PAYMENT_METHODS.COD); } catch (e) { payAuthError = e; }
-  check(payAuthError?.status === 401, "signed-out payForOrder rejects 401");
+  try { await payment.initializePayment(cardOrder.id, payment.BACKEND_PAYMENT_METHODS.COD); } catch (e) { payAuthError = e; }
+  check(payAuthError?.status === 401, "signed-out initializePayment rejects 401");
+  let verifyAuthError = null;
+  try { await payment.verifyPayment(cardOrder.id); } catch (e) { verifyAuthError = e; }
+  check(verifyAuthError?.status === 401, "signed-out verifyPayment rejects 401");
   let readAuthError = null;
   try { await payment.getPaymentByOrderId(cardOrder.id); } catch (e) { readAuthError = e; }
   check(readAuthError?.status === 401, "signed-out getPaymentByOrderId rejects 401");
   check(requests.length === signedOutStart, "signed-out payment calls make no request");
 
-  // Checkout only clears the cart after the payment is recorded: the
+  // Checkout only clears the cart after the payment is initialized: the
   // page maps the chosen method through BACKEND_PAYMENT_METHODS and only
-  // then empties the cart, and it contains no simulated gateway.
+  // then empties the cart. Online payments hand off to the Paystack
+  // hosted checkout via authorizationUrl - there is no simulated
+  // gateway, no Stripe, and no card-detail collection in the browser.
   const checkoutSrc = readFileSync(join(ROOT, "js", "pages", "checkout.js"), "utf8");
   check(
-    checkoutSrc.indexOf("payForOrder(") !== -1 &&
-      checkoutSrc.indexOf("payForOrder(") < checkoutSrc.indexOf("clearCart("),
-    "checkout records the payment before clearing the cart"
+    checkoutSrc.indexOf("initializePayment(") !== -1 &&
+      checkoutSrc.indexOf("initializePayment(") < checkoutSrc.indexOf("clearCart("),
+    "checkout initializes the payment before clearing the cart"
   );
   check(
     checkoutSrc.indexOf("recordPaymentForOrder(") < checkoutSrc.indexOf("clearCart("),
@@ -1274,8 +1335,13 @@ const run = async () => {
     "checkout maps the selected method through BACKEND_PAYMENT_METHODS"
   );
   check(
-    !/Paystack|paystack|Stripe|PaymentIntent|setTimeout/.test(checkoutSrc),
-    "checkout contains no fake/simulated payment gateway behaviour"
+    checkoutSrc.includes("payment.authorizationUrl") &&
+      checkoutSrc.includes("window.location.assign("),
+    "checkout redirects to the hosted-checkout authorizationUrl"
+  );
+  check(
+    !/setTimeout|Stripe|PaymentIntent|cardNumber|cardCvc|cardExpiry|cardName/.test(checkoutSrc),
+    "checkout collects no card details and runs no fake gateway behaviour"
   );
 
   // Restore a session for the later seller tests.
