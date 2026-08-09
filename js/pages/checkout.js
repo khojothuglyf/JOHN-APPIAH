@@ -1,9 +1,12 @@
 /* ============================================================
    CHECKOUT PAGE SCRIPT
    Renders the order summary from the cart, collects delivery and
-   payment details, validates them and places the order locally.
-   Successful orders are stored via ordersService and the cart is
-   cleared before redirecting to the confirmation page.
+   payment details, validates them and places the order with the
+   Spring Boot backend. Only supabaseProductId + quantity and the
+   shipping details are sent - the backend computes all prices and
+   totals. On success the backend order is cached and the cart is
+   cleared before redirecting to the confirmation page. If the
+   backend is unavailable no local order is created.
    ============================================================ */
 
 import { $, escapeHtml, pageUrl, redirect } from "../utils/dom.js";
@@ -17,7 +20,8 @@ import {
 } from "../utils/form.js";
 import { getCart, getCartSubtotal, clearCart } from "../services/cartService.js";
 import { createOrder, PAYMENT_METHODS } from "../services/ordersService.js";
-import { getCurrentUser } from "../services/authService.js";
+import { getCurrentUser, isAuthenticated } from "../services/authService.js";
+import { showToast } from "../components/toast.js";
 
 const IMAGE_FALLBACK = pageUrl("images/placeholder.svg");
 
@@ -125,7 +129,7 @@ function renderSummary() {
   page.summaryTotal.textContent = formatCurrency(subtotal);
 }
 
-function placeOrder() {
+async function placeOrder() {
   clearFieldErrors(page.form);
 
   const values = readFormData(page.form);
@@ -133,6 +137,14 @@ function placeOrder() {
 
   if (Object.keys(errors).length) {
     showFieldErrors(page.form, errors);
+    return;
+  }
+
+  // Orders are created against the authenticated backend, so a
+  // signed-in session is required. The cart survives in localStorage,
+  // so checkout resumes after sign-in.
+  if (!isAuthenticated()) {
+    redirect("pages/login.html", { redirect: "pages/checkout.html" });
     return;
   }
 
@@ -150,21 +162,32 @@ function placeOrder() {
   };
 
   const isCard = values.paymentMethod === PAYMENT_METHODS.CARD;
-  const subtotal = getCartSubtotal();
-  const order = createOrder({
-    items: getCart(),
-    shipping,
-    payment: {
-      method: values.paymentMethod,
-      last4: isCard ? values.cardNumber.replace(/\D/g, "").slice(-4) : null,
-    },
-    subtotal,
-    shippingCost: 0,
-    total: subtotal,
-  });
 
-  clearCart();
-  redirect("pages/order-confirmation.html", { id: order.id });
+  try {
+    // Only items (supabaseProductId + quantity) and the shipping
+    // details are sent. The backend computes all prices and totals;
+    // the returned order is the authoritative record.
+    const order = await createOrder({
+      items: getCart(),
+      shipping,
+      payment: {
+        method: values.paymentMethod,
+        last4: isCard ? values.cardNumber.replace(/\D/g, "").slice(-4) : null,
+      },
+    });
+
+    clearCart();
+    redirect("pages/order-confirmation.html", { id: order.id });
+  } catch (error) {
+    setSubmitState(page.form, false);
+    showToast({
+      title: "Order not placed",
+      message:
+        error?.message ||
+        "The order could not be placed right now. Please try again.",
+      type: "error",
+    });
+  }
 }
 
 /** Validation rules; card fields only apply when paying by card. */

@@ -20,6 +20,7 @@ import {
   ORDER_STATUS,
   getOrderStatusLabel,
   getOrders,
+  syncOrders,
 } from "../services/ordersService.js";
 import { showToast } from "../components/toast.js";
 
@@ -50,6 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
   name.textContent = getDisplayName() || "there";
 
   renderRecentOrders();
+  syncOrders().then(() => renderRecentOrders());
 });
 
 function renderRecentOrders() {

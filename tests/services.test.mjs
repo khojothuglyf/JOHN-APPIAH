@@ -215,6 +215,118 @@ const run = async () => {
     if (method === "DELETE" && pathname.endsWith("/rest/v1/wishlist_items")) {
       return jsonResponse([], { headers: { "content-range": "0-0/0" } });
     }
+    if (method === "GET" && pathname.endsWith("/api/v1/products")) {
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: { content: [], page: 0, size: 24, totalElements: 0, totalPages: 0, last: true },
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+
+    /* Spring Boot orders backend (Phase 10C) */
+    const orderResponse = (overrides = {}) => ({
+      id: 42,
+      orderNumber: "ORD-260807-A1B2",
+      status: "PENDING",
+      currency: "USD",
+      totalAmount: 99.98,
+      discountAmount: 0,
+      couponCode: null,
+      shippingAddress: "1 Main St, IL",
+      city: "Springfield",
+      postalCode: "62701",
+      country: "US",
+      userId: 1,
+      customerName: "Jane Doe",
+      items: [
+        {
+          id: 1,
+          productId: 100,
+          supabaseProductId: "7",
+          productName: "Headphones",
+          unitPrice: 49.99,
+          quantity: 2,
+          subtotal: 99.98,
+        },
+      ],
+      createdAt: "2026-08-07T00:00:00",
+      updatedAt: "2026-08-07T00:00:00",
+      ...overrides,
+    });
+
+    if (method === "POST" && pathname.endsWith("/api/v1/orders")) {
+      if (body?.items?.some((item) => item.supabaseProductId === "FAIL")) {
+        return jsonResponse(
+          { success: false, message: "Insufficient stock", data: null, timestamp: "2026-08-07T00:00:00Z" },
+          { status: 400 }
+        );
+      }
+      const first = body?.items?.[0] || { supabaseProductId: "7", quantity: 1 };
+      return jsonResponse(
+        {
+          success: true,
+          message: "Order placed successfully",
+          data: orderResponse({
+            shippingAddress: body.shippingAddress,
+            city: body.city,
+            postalCode: body.postalCode,
+            country: body.country,
+            items: body.items.map((item, index) => ({
+              id: index + 1,
+              productId: 100 + index,
+              supabaseProductId: item.supabaseProductId,
+              productName: "Headphones",
+              unitPrice: 49.99,
+              quantity: item.quantity,
+              subtotal: Number((49.99 * item.quantity).toFixed(2)),
+            })),
+          }),
+          timestamp: "2026-08-07T00:00:00Z",
+        },
+        { status: 201 }
+      );
+    }
+    if (method === "GET" && pathname.endsWith("/api/v1/orders/seller")) {
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: { content: [orderResponse()], page: 0, size: 20, totalElements: 1, totalPages: 1, last: true },
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+    if (method === "GET" && pathname.endsWith("/api/v1/orders/admin")) {
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: { content: [orderResponse()], page: 0, size: 20, totalElements: 1, totalPages: 1, last: true },
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+    if (method === "GET" && pathname.endsWith("/api/v1/orders")) {
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: { content: [orderResponse()], page: 0, size: 20, totalElements: 1, totalPages: 1, last: true },
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+    if (method === "GET" && /\/api\/v1\/orders\/\d+$/.test(pathname)) {
+      return jsonResponse({
+        success: true,
+        message: "ok",
+        data: orderResponse(),
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
+    if (method === "PUT" && /\/api\/v1\/orders\/\d+\/status$/.test(pathname)) {
+      return jsonResponse({
+        success: true,
+        message: "Order status updated",
+        data: orderResponse({ status: body?.status }),
+        timestamp: "2026-08-07T00:00:00Z",
+      });
+    }
 
     throw new Error(`Unmapped route: ${method} ${url}`);
   };
@@ -228,6 +340,42 @@ const run = async () => {
     });
     return route(String(url), options.method || "GET", options);
   };
+
+  /* ==========================================================
+     [B] HTTP client: /api/v1 versioning + envelope pass-through
+     ========================================================== */
+  section("httpClient");
+  const { http: httpClient } = await import(app("js/utils/http.js"));
+
+  const before = requests.length;
+  const envelope = await httpClient.get(API_ENDPOINTS.products.list, {
+    params: { page: 0, size: 24 },
+  });
+  const httpReq = requests[before];
+  check(
+    httpReq && httpReq.url.includes("/api/v1/products"),
+    "relative endpoints are prefixed with /api/v1"
+  );
+  check(
+    httpReq && httpReq.url.includes("page=0") && httpReq.url.includes("size=24"),
+    "query params are serialized"
+  );
+  check(
+    envelope && Array.isArray(envelope.data?.content),
+    "http passes the ApiResponse envelope through untouched"
+  );
+
+  let absError = null;
+  try {
+    await httpClient.get("https://example.com/ping");
+  } catch (error) {
+    absError = error;
+  }
+  check(
+    requests[requests.length - 1].url === "https://example.com/ping",
+    "absolute URLs are not prefixed"
+  );
+  check(absError instanceof Error, "unmapped absolute URL surfaces an error");
 
   /* ==========================================================
      [C] Auth service (Supabase Auth)
@@ -446,7 +594,7 @@ const run = async () => {
   check(wishSynced === true, "syncWishlistFromServer replaces cache from server");
 
   /* ==========================================================
-     [H] Orders service (local) + enum alignment
+     [H] Orders service (Spring Boot backend) + enum alignment
      ========================================================== */
   section("ordersService");
   const orders = await import(app("js/services/ordersService.js"));
@@ -460,19 +608,101 @@ const run = async () => {
   check(orders.getOrderStatusLabel("PENDING") === "Pending", "PENDING label");
   check(orders.getOrderStatusLabel("CANCELLED") === "Cancelled", "CANCELLED label");
 
-  const order = orders.createOrder({
-    items: [{ productId: 7, productName: "Headphones", quantity: 2 }],
-    shipping: { address: "1 Main St" },
-    payment: { method: "CARD" },
-    subtotal: 99.98,
-    total: 99.98,
+  // Checkout requires a signed-in session. The Supabase access token
+  // is forwarded to the backend as a Bearer token by the HTTP client.
+  auth.setSession({
+    token: "TOK-3",
+    user: { id: "u1", firstName: "Jane", lastName: "Doe", email: "jane@t.com", role: "BUYER" },
   });
-  check(order.orderNumber.startsWith("ORD-"), "createOrder generates ORD-xxxx number");
+
+  const orderStart = requests.length;
+  const order = await orders.createOrder({
+    items: [{ productId: 7, name: "Headphones", price: 1, quantity: 2 }],
+    shipping: {
+      email: "jane@t.com",
+      firstName: "Jane",
+      lastName: "Doe",
+      address: "1 Main St",
+      city: "Springfield",
+      state: "IL",
+      zip: "62701",
+      country: "US",
+    },
+    payment: { method: "CARD", last4: "4242" },
+    subtotal: 9999,
+    shippingCost: 500,
+    total: 9999,
+  });
+  const orderReq = requests[orderStart];
+  check(orderReq?.method === "POST" && orderReq.url.includes("/api/v1/orders"), "createOrder POSTs /api/v1/orders");
+  check(orderReq?.headers?.Authorization === "Bearer TOK-3", "supabase access token is sent as Bearer");
+  const orderBody = JSON.parse(orderReq.body);
+  check(orderBody.items[0]?.supabaseProductId === "7" && orderBody.items[0]?.quantity === 2, "checkout sends supabaseProductId + quantity");
+  check(orderBody.shippingAddress === "1 Main St, IL", "state folds into the shipping address");
+  check(orderBody.city === "Springfield" && orderBody.postalCode === "62701" && orderBody.country === "US", "checkout sends shipping city/zip/country");
+  check(orderBody.currency === "USD", "checkout sends the default currency");
+  check(!("subtotal" in orderBody) && !("total" in orderBody) && !("shippingCost" in orderBody), "checkout never sends frontend totals");
+  check(orderBody.items[0]?.price === undefined && orderBody.items[0]?.subtotal === undefined, "checkout never sends frontend prices");
+
+  check(order.id === 42, "createOrder unwraps the backend order id");
+  check(order.orderNumber === "ORD-260807-A1B2", "backend orderNumber is used");
   check(order.status === "PENDING", "createOrder starts PENDING");
-  check(orders.getOrderById(order.id)?.id === order.id, "getOrderById finds order");
-  const updated = orders.updateOrderStatus(order.id, "SHIPPED");
+  check(order.total === 99.98, "backend totalAmount is authoritative (frontend total ignored)");
+  check(order.subtotal === 99.98, "subtotal derived from backend items");
+  check(order.shippingCost === 0, "shipping cost comes from the backend");
+  check(order.currency === "USD", "backend currency is mapped");
+  check(order.items[0]?.productId === "7", "item productId maps to the Supabase product id");
+  check(order.items[0]?.name === "Headphones" && order.items[0]?.price === 49.99, "item name/price come from the backend");
+  check(order.payment?.method === "CARD", "payment display info kept for the confirmation page");
+  check(orders.getOrderById(order.id)?.id === order.id, "created order is cached for getOrderById");
+
+  const updated = await orders.updateOrderStatus(order.id, "SHIPPED");
   check(updated?.status === "SHIPPED", "updateOrderStatus advances to SHIPPED");
-  check(orders.updateOrderStatus(order.id, "NOPE") === null, "updateOrderStatus rejects bad status");
+  const statusReq = requests[requests.length - 1];
+  check(statusReq?.url.includes("/api/v1/orders/42/status"), "status update targets /orders/{id}/status");
+  check(JSON.parse(statusReq.body)?.status === "SHIPPED", "status update sends { status }");
+  check(await orders.updateOrderStatus(order.id, "NOPE") === null, "updateOrderStatus rejects bad status without a request");
+
+  // The backend is authoritative: a failed checkout never fabricates
+  // a local order.
+  const cacheBeforeFail = orders.getOrders().length;
+  let checkoutError = null;
+  try {
+    await orders.createOrder({
+      items: [{ productId: "FAIL", quantity: 1 }],
+      shipping: { address: "x", city: "y", zip: "z", country: "c" },
+    });
+  } catch (error) {
+    checkoutError = error;
+  }
+  check(checkoutError instanceof Error, "backend rejection surfaces an error");
+  check(orders.getOrders().length === cacheBeforeFail, "no local order is fabricated on backend failure");
+
+  // Reads sync from the backend (buyer / seller scopes).
+  const synced = await orders.syncOrders();
+  check(Array.isArray(synced) && synced.length === 1, "syncOrders fetches paged buyer orders");
+  check(synced[0]?.orderNumber === "ORD-260807-A1B2", "synced orders are mapped to the frontend shape");
+  await orders.syncOrders({ scope: "seller" });
+  check(
+    requests[requests.length - 1].url.includes("/api/v1/orders/seller"),
+    "seller scope hits /orders/seller"
+  );
+
+  const fetched = await orders.getOrder(42);
+  check(fetched?.id === 42 && fetched?.orderNumber === "ORD-260807-A1B2", "getOrder fetches a single order by id");
+
+  // Signed out: reads degrade to the local cache (no backend call).
+  auth.logout();
+  const offlineStart = requests.length;
+  const offline = await orders.syncOrders();
+  check(Array.isArray(offline), "syncOrders degrades to the local cache when signed out");
+  check(requests.length === offlineStart, "no backend request is made when signed out");
+
+  // Restore a session for the later profile tests.
+  auth.setSession({
+    token: "TOK-1",
+    user: { id: "u1", firstName: "Jane", lastName: "Doe", email: "jane@t.com", role: "SELLER" },
+  });
 
   /* ==========================================================
      [I] Seller service (local) + enum alignment

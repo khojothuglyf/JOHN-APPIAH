@@ -23,7 +23,11 @@ import {
   signInPreview,
 } from "../services/authService.js";
 import { USER_ROLES, isPreviewMode } from "../config.js";
-import { ORDER_STATUS, getOrderStatusLabel } from "../services/ordersService.js";
+import {
+  ORDER_STATUS,
+  getOrderStatusLabel,
+  syncOrders,
+} from "../services/ordersService.js";
 import {
   PRODUCT_STATUS,
   getSellerProduct,
@@ -36,6 +40,7 @@ import {
   getSellerStats,
 } from "../services/sellerService.js";
 import { showToast } from "../components/toast.js";
+import { getCategories } from "../services/categoryService.js";
 
 const IMAGE_FALLBACK = pageUrl("images/placeholder.svg");
 
@@ -95,7 +100,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
   bindEvents();
   renderAll();
+  loadCategoryOptions();
+  syncSellerOrders();
 });
+
+/** Refresh the fulfilment list from the backend (best effort; the
+ *  local cache is kept when the backend is unavailable). */
+async function syncSellerOrders() {
+  try {
+    await syncOrders({ scope: "seller" });
+  } catch (error) {
+    console.warn(
+      "[seller] could not sync orders from the backend:",
+      error?.message || error
+    );
+  }
+  renderAll();
+}
 
 function bindEvents() {
   // Tabs
@@ -150,25 +171,39 @@ function bindEvents() {
   page.productForm.addEventListener("submit", saveProduct);
 
   // Order status changes
-  page.ordersList.addEventListener("change", (event) => {
+  page.ordersList.addEventListener("change", async (event) => {
     const select = event.target.closest("[data-order-status]");
     if (!select) return;
 
-    const order = updateSellerOrderStatus(select.dataset.orderStatus, select.value);
-    if (order) {
-      showToast({
-        title: "Order updated",
-        message: `${order.orderNumber} is now ${getOrderStatusLabel(order.status)}`,
-        type: "success",
-      });
-      renderAll();
-    } else {
-      renderAll();
+    select.disabled = true;
+    try {
+      const order = await updateSellerOrderStatus(
+        select.dataset.orderStatus,
+        select.value
+      );
+      if (order) {
+        showToast({
+          title: "Order updated",
+          message: `${order.orderNumber} is now ${getOrderStatusLabel(order.status)}`,
+          type: "success",
+        });
+      } else {
+        showToast({
+          title: "Update failed",
+          message: "The order status could not be changed.",
+          type: "error",
+        });
+      }
+    } catch (error) {
       showToast({
         title: "Update failed",
-        message: "The order status could not be changed.",
+        message:
+          error?.message || "The order status could not be changed.",
         type: "error",
       });
+    } finally {
+      renderAll();
+      select.disabled = false;
     }
   });
 }
@@ -261,7 +296,8 @@ function openProductModal(product = null) {
 
   if (product) {
     $("[name='name']", form).value = product.name || "";
-    $("[name='category']", form).value = product.category || "";
+    selectProductCategory(form, product.category || "");
+    $("[name='sku']", form).value = product.sku || "";
     $("[name='price']", form).value = product.price ?? "";
     $("[name='oldPrice']", form).value = product.oldPrice || "";
     $("[name='stock']", form).value = product.stock ?? "";
@@ -287,9 +323,13 @@ function saveProduct(event) {
   }
 
   const id = $("[data-product-id]", form).value;
+  const categorySelect = $("[name='category']", form);
+  const categoryId = categorySelect?.selectedOptions[0]?.dataset?.categoryId;
   const payload = {
     name: values.name.trim(),
     category: values.category,
+    categoryId: categoryId ? Number(categoryId) : null,
+    sku: (values.sku || "").trim(),
     description: values.description.trim(),
     price: Number(values.price),
     oldPrice: Number(values.oldPrice) || 0,
@@ -319,10 +359,50 @@ function saveProduct(event) {
 const PRODUCT_RULES = {
   name: [validators.required],
   category: [validators.required],
+  sku: [validators.maxLength(64)],
   price: [validators.required, validators.numeric, validators.positive],
   stock: [validators.required, validators.numeric],
   status: [validators.required],
 };
+
+/* ---- Category options ---- */
+
+/** Populate the category select from the live Supabase categories. */
+async function loadCategoryOptions() {
+  const select = page.productForm?.elements.category;
+  if (!select) return;
+  try {
+    const categories = await getCategories();
+    if (!Array.isArray(categories) || categories.length === 0) return;
+    select.innerHTML = '<option value="">Select a category</option>';
+    categories.forEach((category) => {
+      const option = document.createElement("option");
+      option.value = category.name;
+      option.textContent = category.name;
+      if (category.id != null) option.dataset.categoryId = String(category.id);
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.warn(
+      "[seller] could not load live categories, using fallback list:",
+      error?.message || error
+    );
+  }
+}
+
+/** Select a category option by name, adding a fallback option if absent. */
+function selectProductCategory(form, name) {
+  const select = $("[name='category']", form);
+  if (!select || !name) return;
+  const matches = Array.from(select.options).some(
+    (option) => option.value === name
+  );
+  if (!matches) {
+    const option = new Option(name, name);
+    select.appendChild(option);
+  }
+  select.value = name;
+}
 
 /* ---- Orders ---- */
 

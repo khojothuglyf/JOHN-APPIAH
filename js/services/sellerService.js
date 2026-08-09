@@ -159,6 +159,8 @@ export function createProduct(data = {}) {
     oldPrice: Number(data.oldPrice) || 0,
     imageUrl: data.imageUrl || "",
     category: data.category || "",
+    categoryId: data.categoryId ?? null,
+    sku: data.sku || "",
     stock: Number(data.stock) || 0,
     status: data.status || PRODUCT_STATUS.INACTIVE,
     rating: 0,

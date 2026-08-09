@@ -1,7 +1,7 @@
 /* ============================================================
    HTTP CLIENT
    Single fetch wrapper used by every service. Handles:
-   - base URL + endpoint resolution
+   - base URL + endpoint resolution (/api/v1 prefix for relative paths)
    - JSON serialization / parsing
    - auth token injection
    - query-string params
@@ -9,7 +9,7 @@
    - normalized errors (ApiError)
    ============================================================ */
 
-import { API_BASE_URL, STORAGE_KEYS } from "../config.js";
+import { API_BASE_URL, BACKEND_API_URL, STORAGE_KEYS } from "../config.js";
 import { storage } from "./storage.js";
 
 const DEFAULT_TIMEOUT = 15000;
@@ -24,8 +24,27 @@ export class ApiError extends Error {
   }
 }
 
+/** Base origin for API calls: the Spring Boot backend when
+ *  configured (BACKEND_API_URL), otherwise the legacy API_BASE_URL
+ *  alias for backward compatibility. */
+const API_ORIGIN = BACKEND_API_URL || API_BASE_URL;
+
+const API_VERSION_PREFIX = "/api/v1";
+
+/**
+ * Resolve an endpoint path to a full URL. Relative paths (see
+ * API_ENDPOINTS) are versioned with the /api/v1 prefix at call
+ * time; absolute URLs (http(s):// or protocol-relative) pass
+ * through untouched, and /api/ paths are never double-prefixed.
+ */
 function resolveUrl(path, params) {
-  const url = new URL(path.startsWith("http") ? path : `${API_BASE_URL}${path}`);
+  const isAbsolute =
+    /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(path) || path.startsWith("//");
+  const versioned =
+    isAbsolute || path.startsWith("/api/")
+      ? path
+      : `${API_VERSION_PREFIX}${path.startsWith("/") ? path : `/${path}`}`;
+  const url = new URL(isAbsolute ? versioned : `${API_ORIGIN}${versioned}`);
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== "") {

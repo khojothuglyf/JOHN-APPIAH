@@ -9,6 +9,7 @@
 
 export {
   API_BASE_URL,
+  BACKEND_API_URL,
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
 } from "./api-config.js";

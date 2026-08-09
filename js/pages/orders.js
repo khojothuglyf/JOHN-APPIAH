@@ -1,13 +1,15 @@
 /* ============================================================
    MY ORDERS PAGE SCRIPT
-   Lists all locally placed orders (newest first) as expandable
-   cards. Each card shows the order header plus items, shipping,
-   payment and totals once expanded.
+   Syncs the signed-in buyer's orders from the Spring Boot backend,
+   then lists them (newest first) as expandable cards. Each card
+   shows the order header plus items, shipping, payment and totals
+   once expanded. If the backend is unavailable the local cache is
+   shown.
    ============================================================ */
 
 import { $, escapeHtml } from "../utils/dom.js";
 import { formatCurrency } from "../utils/format.js";
-import { getOrders } from "../services/ordersService.js";
+import { getOrders, syncOrders } from "../services/ordersService.js";
 import {
   orderHeaderTemplate,
   orderItemsTemplate,
@@ -26,12 +28,11 @@ document.addEventListener("DOMContentLoaded", () => {
   page.count = $("[data-orders-count]");
   if (!page.list) return;
 
-  render();
+  syncOrders().then(() => render());
 });
 
 function render() {
   const orders = getOrders();
-
   if (orders.length === 0) {
     page.list.hidden = true;
     page.empty.hidden = false;

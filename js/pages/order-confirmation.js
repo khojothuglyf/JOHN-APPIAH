@@ -6,7 +6,7 @@
    ============================================================ */
 
 import { $, getQueryParam } from "../utils/dom.js";
-import { getOrderById } from "../services/ordersService.js";
+import { getOrder, getOrderById } from "../services/ordersService.js";
 import {
   orderHeaderTemplate,
   orderItemsTemplate,
@@ -18,12 +18,24 @@ const page = {
   notFound: null,
 };
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   page.confirmation = $("[data-confirmation]");
   page.notFound = $("[data-confirmation-not-found]");
   if (!page.confirmation) return;
 
-  const order = getOrderById(getQueryParam("id"));
+  const orderId = getQueryParam("id");
+
+  // Prefer the order cached during checkout; fall back to fetching it
+  // from the backend (e.g. after a page refresh or from another tab).
+  let order = getOrderById(orderId);
+  if (!order && orderId) {
+    try {
+      order = await getOrder(orderId);
+    } catch {
+      order = null;
+    }
+  }
+
   if (!order) {
     page.confirmation.hidden = true;
     page.notFound.hidden = false;

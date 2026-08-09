@@ -3,10 +3,13 @@
    - Resolves the Supabase URL + anon key from the SUPABASE_URL /
      SUPABASE_ANON_KEY env vars (API_BASE_URL is kept for legacy
      REST compatibility and defaults to the Supabase origin).
+   - Resolves the Spring Boot backend origin from BACKEND_API_URL
+     (public, never a secret); when unset the backend-dependent
+     services keep their local fallbacks.
    - Copies the static site into dist/ (excluding tests/, scripts/,
      .git, node_modules, ...).
    - Generates dist/js/api-config.js so the app talks to the
-     configured backend at runtime.
+     configured Supabase + backend at runtime.
    Zero runtime dependencies.
    ============================================================ */
 
@@ -27,6 +30,7 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const distDir = join(root, "dist");
 
 const API_BASE_URL = (process.env.API_BASE_URL || "").trim();
+const BACKEND_API_URL = (process.env.BACKEND_API_URL || "").trim();
 const SUPABASE_URL = (process.env.SUPABASE_URL || "").trim();
 const SUPABASE_ANON_KEY = (process.env.SUPABASE_ANON_KEY || "").trim();
 const SITE_URL = (process.env.SITE_URL || "").trim();
@@ -90,11 +94,14 @@ copyTree(root, distDir);
 const generatedConfig = `/* ============================================================
    GENERATED FILE - DO NOT EDIT.
    Created by scripts/build.mjs at deploy time from the
-   SUPABASE_URL / SUPABASE_ANON_KEY environment variables. The
-   committed copy in js/ is the local development fallback.
+   SUPABASE_URL / SUPABASE_ANON_KEY / BACKEND_API_URL environment
+   variables. The committed copy in js/ is the local development
+   fallback.
    ============================================================ */
 
 export const API_BASE_URL = ${JSON.stringify(resolvedApiBase)};
+
+export const BACKEND_API_URL = ${JSON.stringify(BACKEND_API_URL)};
 
 export const SUPABASE_URL = ${JSON.stringify(resolvedSupabaseUrl)};
 
@@ -111,6 +118,9 @@ console.log(`Build complete: dist/ ready for Netlify publish.`);
 console.log(`Supabase URL: ${resolvedSupabaseUrl}`);
 console.log(
   `Supabase anon key: ${SUPABASE_ANON_KEY ? "configured" : "local fallback"}`
+);
+console.log(
+  `Backend API URL: ${BACKEND_API_URL || "unset (backend services keep local fallbacks)"}`
 );
 
 /* ------------------------------------------------------------
@@ -228,9 +238,9 @@ ${distFiles.map((url) => `  ${JSON.stringify(url)}`).join(",\n")}
 
   let apiOrigin;
   try {
-    apiOrigin = new URL(resolvedApiBase).origin;
+    apiOrigin = new URL(BACKEND_API_URL || resolvedApiBase).origin;
   } catch {
-    apiOrigin = resolvedApiBase;
+    apiOrigin = BACKEND_API_URL || resolvedApiBase;
   }
 
   const swOut = swSource
