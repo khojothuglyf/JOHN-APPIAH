@@ -521,6 +521,11 @@
   white-space: nowrap;
 }
 
+.admin-table__muted {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
 /* ---- Small select ---- */
 .form-select--sm {
   width: auto;

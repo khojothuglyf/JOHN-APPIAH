@@ -119,6 +119,7 @@ export function addItem(product = {}, quantity = 1) {
       name: product.name,
       price: product.price,
       imageUrl: product.imageUrl,
+      sellerId: product.sellerId,
       quantity: qty,
     });
     if (line) {

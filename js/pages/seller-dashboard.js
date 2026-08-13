@@ -45,6 +45,12 @@ import {
   getRevenueTimeline,
 } from "../services/sellerService.js";
 import { showToast } from "../components/toast.js";
+import {
+  DELIVERY_STATUS,
+  getDeliveryStatusLabel,
+  listDeliveryRequests,
+  updateDeliveryStatus,
+} from "../services/deliveryService.js";
 import { getCategories } from "../services/categoryService.js";
 import { fetchCatalogCategories } from "../services/adminService.js";
 import {
@@ -84,6 +90,7 @@ const page = {
 
 let deleteTargetId = null;
 let dashboardSummary = null;
+let deliveryRequests = [];
 
 /** Supabase <-> backend category pairs used by the product form
  *  (see loadCategoryOptions). Each entry carries the Spring Boot
@@ -145,6 +152,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadCategoryOptions();
   loadDashboard();
   loadAnalytics();
+  syncDeliveryRequests();
 });
 
 /** Load products, summary and orders from the backend. Any failure
@@ -178,6 +186,18 @@ function showDashboardError(message) {
     page.dashboardErrorMessage.textContent = message;
   }
   page.dashboardError.hidden = false;
+}
+
+/** Load the seller's delivery requests (RLS scopes them to the
+ *  signed-in seller). Best effort: the order rows simply omit the
+ *  delivery block when Supabase is unreachable. */
+async function syncDeliveryRequests() {
+  try {
+    deliveryRequests = await listDeliveryRequests();
+  } catch {
+    deliveryRequests = [];
+  }
+  renderOrders();
 }
 
 function bindEvents() {
@@ -274,6 +294,42 @@ function bindEvents() {
     } finally {
       renderAll();
       select.disabled = false;
+    }
+  });
+
+  // Delivery request actions (confirm / mark ready)
+  page.ordersList.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-delivery-action]");
+    if (!button) return;
+
+    button.disabled = true;
+    try {
+      const updated = await updateDeliveryStatus(
+        button.dataset.deliveryAction,
+        button.dataset.deliveryStatus
+      );
+      if (updated) {
+        showToast({
+          title: "Delivery updated",
+          message: `${getDeliveryStatusLabel(updated.status)} - contact the buyer to agree details.`,
+          type: "success",
+        });
+      } else {
+        showToast({
+          title: "Update failed",
+          message: "The delivery request could not be changed.",
+          type: "error",
+        });
+      }
+    } catch (error) {
+      showToast({
+        title: "Update failed",
+        message:
+          error?.message || "The delivery request could not be changed.",
+        type: "error",
+      });
+    } finally {
+      syncDeliveryRequests();
     }
   });
 }
@@ -601,6 +657,15 @@ function timelineRowTemplate(point = {}) {
 
 /* ---- Orders ---- */
 
+/** The seller's delivery request for one order, if any. */
+function deliveryForOrder(orderId) {
+  return (
+    deliveryRequests.find(
+      (request) => String(request.orderId) === String(orderId)
+    ) || null
+  );
+}
+
 function renderOrders() {
   const orders = getSellerOrders();
   page.ordersCount.textContent = `(${orders.length})`;
@@ -612,10 +677,12 @@ function renderOrders() {
   }
 
   page.ordersEmpty.hidden = true;
-  page.ordersList.innerHTML = orders.map(sellerOrderRowTemplate).join("");
+  page.ordersList.innerHTML = orders
+    .map((order) => sellerOrderRowTemplate(order, deliveryForOrder(order.id)))
+    .join("");
 }
 
-function sellerOrderRowTemplate(order = {}) {
+function sellerOrderRowTemplate(order = {}, delivery = null) {
   const shipping = order.shipping || {};
   const customer =
     [shipping.firstName, shipping.lastName].filter(Boolean).join(" ") ||
@@ -629,6 +696,37 @@ function sellerOrderRowTemplate(order = {}) {
         `<option value="${status}" ${order.status === status ? "selected" : ""}>${getOrderStatusLabel(status)}</option>`
     )
     .join("");
+
+  const deliveryBlock = delivery
+    ? `
+      <div class="seller-order__delivery">
+        <div class="seller-order__delivery-meta">
+          <p class="seller-order__delivery-title">
+            Delivery request
+            <span class="badge badge--info">${escapeHtml(getDeliveryStatusLabel(delivery.status))}</span>
+          </p>
+          <p>${escapeHtml(delivery.recipientName)} · ${escapeHtml(delivery.recipientPhone)}</p>
+          <p>${escapeHtml(delivery.deliveryArea)}</p>
+          ${delivery.deliveryInstructions ? `<p>${escapeHtml(delivery.deliveryInstructions)}</p>` : ""}
+        </div>
+        <div class="seller-order__delivery-actions">
+          ${
+            delivery.status === DELIVERY_STATUS.REQUESTED
+              ? `<button class="btn btn--primary btn--sm" type="button"
+                  data-delivery-action="${escapeHtml(delivery.id)}"
+                  data-delivery-status="${DELIVERY_STATUS.DELIVERY_CONFIRMED}">Confirm delivery</button>`
+              : ""
+          }
+          ${
+            delivery.status !== DELIVERY_STATUS.READY_FOR_DELIVERY
+              ? `<button class="btn btn--outline btn--sm" type="button"
+                  data-delivery-action="${escapeHtml(delivery.id)}"
+                  data-delivery-status="${DELIVERY_STATUS.READY_FOR_DELIVERY}">Ready for delivery</button>`
+              : ""
+          }
+        </div>
+      </div>`
+    : "";
 
   return `
     <div class="seller-order card">
@@ -648,6 +746,7 @@ function sellerOrderRowTemplate(order = {}) {
         aria-label="Status for ${escapeHtml(order.orderNumber || order.id)}">
         ${statusOptions}
       </select>
+      ${deliveryBlock}
     </div>
   `;
 }

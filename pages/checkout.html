@@ -151,7 +151,27 @@
 
             <fieldset class="checkout-section">
               <legend class="checkout-section__title">
-                <span class="checkout-section__step">3</span> Payment
+                <span class="checkout-section__step">3</span> Delivery choice
+              </legend>
+              <div class="form-group" data-field="deliveryChoice">
+                <label class="form-label" for="checkout-delivery-choice">How would you like to receive this order?</label>
+                <select class="form-select" id="checkout-delivery-choice" name="deliveryChoice" data-delivery-choice>
+                  <option value="PICKUP">Pickup from seller — free</option>
+                  <option value="REQUEST_DELIVERY">Request delivery — seller confirms availability, fee, and delivery time directly with you</option>
+                </select>
+              </div>
+              <div data-delivery-request-fields hidden>
+                <p class="form-hint">Sellers arrange delivery directly with buyers. Any fee and delivery time are confirmed after the order; your product total stays unchanged.</p>
+                <div class="form-group" data-field="recipientName"><label class="form-label" for="delivery-recipient-name">Recipient name <span class="form-required">*</span></label><input class="form-input" id="delivery-recipient-name" name="recipientName" type="text" autocomplete="name" /><p class="form-error" data-error></p></div>
+                <div class="form-group" data-field="recipientPhone"><label class="form-label" for="delivery-recipient-phone">Recipient phone number <span class="form-required">*</span></label><input class="form-input" id="delivery-recipient-phone" name="recipientPhone" type="tel" autocomplete="tel" /><p class="form-error" data-error></p></div>
+                <div class="form-group" data-field="deliveryArea"><label class="form-label" for="delivery-area">Delivery area / town <span class="form-required">*</span></label><input class="form-input" id="delivery-area" name="deliveryArea" type="text" autocomplete="address-level2" /><p class="form-error" data-error></p></div>
+                <div class="form-group" data-field="deliveryInstructions"><label class="form-label" for="delivery-instructions">Landmark or full delivery instructions <span class="form-required">*</span></label><textarea class="form-textarea" id="delivery-instructions" name="deliveryInstructions" rows="3"></textarea><p class="form-error" data-error></p></div>
+              </div>
+            </fieldset>
+
+            <fieldset class="checkout-section">
+              <legend class="checkout-section__title">
+                <span class="checkout-section__step">4</span> Payment
               </legend>
               <div class="form-group" data-field="paymentMethod">
                 <label class="form-label" for="checkout-payment-method">
@@ -182,8 +202,8 @@
                 <strong data-summary-subtotal></strong>
               </div>
               <div class="cart-summary__row">
-                <span>Shipping</span>
-                <strong>Free</strong>
+                <span>Delivery arrangement</span>
+                <strong>Pickup / seller confirmed</strong>
               </div>
             </div>
             <div class="cart-summary__total">
@@ -198,7 +218,7 @@
               </button>
               <a class="btn btn--ghost btn--block" href="cart.html">Back to cart</a>
             </div>
-            <p class="form-hint u-text-center">Free shipping on every order.</p>
+            <p class="form-hint u-text-center">Pickup is free. Sellers confirm any requested delivery fee directly with buyers.</p>
           </aside>
         </form>
       </div>

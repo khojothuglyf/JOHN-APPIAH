@@ -136,6 +136,10 @@ const run = async () => {
   let orderSeq = 42;
   let paymentSeq = 500;
 
+  /* Phase 1 delivery-request mock state (PostgREST delivery_requests). */
+  const deliveryStore = new Map();
+  let deliverySeq = 900;
+
   const PRODUCT_ROW = {
     id: 7,
     name: "Test Headphones",
@@ -241,6 +245,53 @@ const run = async () => {
     }
     if (method === "DELETE" && pathname.endsWith("/rest/v1/wishlist_items")) {
       return jsonResponse([], { headers: { "content-range": "0-0/0" } });
+    }
+    if (method === "POST" && pathname.endsWith("/rest/v1/delivery_requests")) {
+      const rows = (Array.isArray(body) ? body : [body]).map((row) => {
+        const existing = [...deliveryStore.values()].find(
+          (r) => r.order_id === row.order_id && r.seller_id === row.seller_id
+        );
+        const id = existing ? existing.id : deliverySeq++;
+        const created = {
+          id,
+          order_id: row.order_id,
+          buyer_id: row.buyer_id,
+          seller_id: row.seller_id,
+          recipient_name: row.recipient_name,
+          recipient_phone: row.recipient_phone,
+          delivery_area: row.delivery_area,
+          delivery_instructions: row.delivery_instructions,
+          status: existing?.status || "REQUESTED",
+          created_at: existing?.created_at || "2026-08-12T00:00:00Z",
+          updated_at: "2026-08-12T00:00:00Z",
+        };
+        deliveryStore.set(id, created);
+        return created;
+      });
+      return jsonResponse(rows);
+    }
+    if (method === "GET" && pathname.endsWith("/rest/v1/delivery_requests")) {
+      const rows = [...deliveryStore.values()];
+      return jsonResponse(rows, {
+        headers: {
+          "content-range": `0-${Math.max(0, rows.length - 1)}/${rows.length}`,
+        },
+      });
+    }
+    if (method === "PATCH" && pathname.endsWith("/rest/v1/delivery_requests")) {
+      const idFilter = searchParams.get("id");
+      const ids = idFilter?.startsWith("eq.")
+        ? [Number(idFilter.slice(3))]
+        : [];
+      const updated = [];
+      for (const id of ids) {
+        const row = deliveryStore.get(id);
+        if (!row) continue;
+        const next = { ...row, ...body, updated_at: "2026-08-12T01:00:00Z" };
+        deliveryStore.set(id, next);
+        updated.push(next);
+      }
+      return jsonResponse(updated);
     }
     if (method === "GET" && pathname.endsWith("/api/v1/products")) {
       return jsonResponse({
@@ -1342,6 +1393,190 @@ const run = async () => {
   check(
     !/setTimeout|Stripe|PaymentIntent|cardNumber|cardCvc|cardExpiry|cardName/.test(checkoutSrc),
     "checkout collects no card details and runs no fake gateway behaviour"
+  );
+  check(
+    checkoutSrc.indexOf("createDeliveryRequests(") !== -1 &&
+      checkoutSrc.indexOf("createDeliveryRequests(") < checkoutSrc.indexOf("clearCart("),
+    "checkout requests delivery before clearing the cart"
+  );
+  check(
+    checkoutSrc.includes("deliveryChoice") &&
+      checkoutSrc.includes("toggleDeliveryFields"),
+    "checkout toggles the delivery request fields by choice"
+  );
+
+  /* ==========================================================
+     [H3] Delivery requests (Supabase PostgREST)
+     ========================================================== */
+  section("deliveryService");
+  const delivery = await import(app("js/services/deliveryService.js"));
+  check(
+    delivery.DELIVERY_STATUS.REQUESTED === "REQUESTED" &&
+      delivery.DELIVERY_STATUS.DELIVERY_CONFIRMED === "DELIVERY_CONFIRMED" &&
+      delivery.DELIVERY_STATUS.READY_FOR_DELIVERY === "READY_FOR_DELIVERY",
+    "DELIVERY_STATUS enum matches the migration"
+  );
+  check(
+    delivery.getDeliveryStatusLabel("DELIVERY_CONFIRMED") === "Delivery confirmed" &&
+      delivery.getDeliveryStatusLabel("READY_FOR_DELIVERY") === "Ready for delivery",
+    "delivery status labels are human-readable"
+  );
+
+  // Signed out: rejected locally before any request.
+  auth.logout();
+  const deliverySignedOutStart = requests.length;
+  let deliveryAuthError = null;
+  try {
+    await delivery.createDeliveryRequests({
+      orderId: "42",
+      items: [{ sellerId: "s1" }],
+      details: {
+        recipientName: "A",
+        recipientPhone: "1",
+        deliveryArea: "X",
+        deliveryInstructions: "Y",
+      },
+    });
+  } catch (e) {
+    deliveryAuthError = e;
+  }
+  check(deliveryAuthError?.status === 401, "signed-out delivery request rejects 401");
+  check(requests.length === deliverySignedOutStart, "signed-out delivery request makes no request");
+
+  // Signed-in buyer: one request per seller, upserted on order+seller.
+  auth.setSession({
+    token: "TOK-1",
+    user: { id: "u1", firstName: "Jane", lastName: "Doe", email: "jane@t.com", role: "BUYER" },
+  });
+  const deliveryStart = requests.length;
+  const createdDeliveries = await delivery.createDeliveryRequests({
+    orderId: "42",
+    items: [{ sellerId: "s1" }, { sellerId: "s2" }],
+    details: {
+      recipientName: "Jane",
+      recipientPhone: "0801234567",
+      deliveryArea: "Lagos",
+      deliveryInstructions: "Call on arrival",
+    },
+  });
+  check(
+    Array.isArray(createdDeliveries) && createdDeliveries.length === 2,
+    "one delivery request is created per seller"
+  );
+  check(
+    createdDeliveries[0].status === "REQUESTED" &&
+      createdDeliveries[0].recipientName === "Jane" &&
+      createdDeliveries[0].deliveryArea === "Lagos",
+    "created requests map recipient + area and start REQUESTED"
+  );
+  check(
+    requests[deliveryStart].url.includes("on_conflict=order_id%2Cseller_id"),
+    "delivery insert upserts on order_id+seller_id"
+  );
+  const deliveryRow = JSON.parse(requests[deliveryStart].body);
+  check(
+    deliveryRow[0].order_id === "42" &&
+      deliveryRow[0].buyer_id === "u1" &&
+      deliveryRow[0].seller_id === "s1",
+    "request row carries order, buyer and seller"
+  );
+
+  // Retrying the same order/seller is idempotent (upsert merge).
+  await delivery.createDeliveryRequests({
+    orderId: "42",
+    items: [{ sellerId: "s1" }],
+    details: {
+      recipientName: "Jane",
+      recipientPhone: "0801234567",
+      deliveryArea: "Lagos",
+      deliveryInstructions: "Call on arrival",
+    },
+  });
+  const allDeliveryRows = [...deliveryStore.values()];
+  check(
+    allDeliveryRows.filter((r) => r.order_id === "42" && r.seller_id === "s1").length === 1,
+    "retried request merges on the order+seller key"
+  );
+
+  // Reads list mapped requests (participant scope is enforced by RLS).
+  const listed = await delivery.listDeliveryRequests();
+  check(
+    Array.isArray(listed) &&
+      listed.some((r) => r.orderId === "42" && r.sellerId === "s1"),
+    "listDeliveryRequests returns mapped requests"
+  );
+
+  // Guard rails fail before any request.
+  const deliveryGuardStart = requests.length;
+  let noOrderErr = null;
+  try {
+    await delivery.createDeliveryRequests({
+      orderId: null,
+      items: [{ sellerId: "s1" }],
+      details: {},
+    });
+  } catch (e) {
+    noOrderErr = e;
+  }
+  check(noOrderErr?.status === 400, "missing order id rejects 400");
+  let noSellerErr = null;
+  try {
+    await delivery.createDeliveryRequests({
+      orderId: "43",
+      items: [{ sellerId: "" }],
+      details: {},
+    });
+  } catch (e) {
+    noSellerErr = e;
+  }
+  check(noSellerErr?.status === 400, "order with no sellers rejects 400");
+  check(requests.length === deliveryGuardStart, "invalid delivery input fails before any request");
+
+  // Seller status updates go through PATCH.
+  const target = listed.find((r) => r.orderId === "42");
+  const confirmed = await delivery.updateDeliveryStatus(
+    target.id,
+    "DELIVERY_CONFIRMED"
+  );
+  check(confirmed?.status === "DELIVERY_CONFIRMED", "seller confirms a delivery request");
+  check(
+    requests[requests.length - 1].method === "PATCH" &&
+      requests[requests.length - 1].url.includes("/rest/v1/delivery_requests"),
+    "delivery status update PATCHes delivery_requests"
+  );
+  check(
+    await delivery.updateDeliveryStatus(target.id, "NOPE") === null,
+    "invalid delivery status is rejected without a request"
+  );
+
+  // The migration enforces the same rules as the browser guards.
+  const deliverySql = readFileSync(
+    join(ROOT, "supabase", "20260812_delivery_requests.sql"),
+    "utf8"
+  );
+  check(
+    deliverySql.includes("create table if not exists public.delivery_requests"),
+    "delivery migration defines the table idempotently"
+  );
+  check(
+    deliverySql.includes("unique (order_id, seller_id)"),
+    "migration keys requests on order_id+seller_id"
+  );
+  check(
+    deliverySql.includes("auth.uid() = buyer_id or auth.uid() = seller_id or public.is_admin()"),
+    "select policy limits reads to participants + admins"
+  );
+  check(
+    deliverySql.includes("auth.uid() = buyer_id and auth.uid() <> seller_id"),
+    "insert policy is buyer-only"
+  );
+  check(
+    deliverySql.includes("status in ('DELIVERY_CONFIRMED', 'READY_FOR_DELIVERY')"),
+    "seller updates only delivery-state statuses"
+  );
+  check(
+    deliverySql.includes("enable row level security"),
+    "RLS is enabled on delivery_requests"
   );
 
   // Restore a session for the later seller tests.

@@ -13,6 +13,10 @@ import {
   getPaymentStatusLabel,
   PAYMENT_PROVIDERS,
 } from "../services/paymentService.js";
+import {
+  DELIVERY_STATUS,
+  getDeliveryStatusLabel,
+} from "../services/deliveryService.js";
 
 const IMAGE_FALLBACK = pageUrl("images/placeholder.svg");
 
@@ -33,6 +37,38 @@ export function orderStatusBadge(status) {
   return `<span class="badge ${orderStatusClass(status)}">${escapeHtml(
     getOrderStatusLabel(status)
   )}</span>`;
+}
+
+/** Badge variant class for a delivery request status. */
+export function deliveryStatusClass(status) {
+  return {
+    [DELIVERY_STATUS.REQUESTED]: "badge--info",
+    [DELIVERY_STATUS.DELIVERY_CONFIRMED]: "badge--primary",
+    [DELIVERY_STATUS.READY_FOR_DELIVERY]: "badge--success",
+  }[status] || "badge--outline";
+}
+
+/** Delivery request summary block for buyer-facing order cards. */
+export function deliveryTemplate(request = {}) {
+  const instructions = request.deliveryInstructions
+    ? `<br />${escapeHtml(request.deliveryInstructions)}`
+    : "";
+  return `
+    <div class="order-card__delivery">
+      <div class="order-card__delivery-head">
+        <h3 class="order-card__subtitle">Delivery</h3>
+        <span class="badge ${deliveryStatusClass(request.status)}">${escapeHtml(
+          getDeliveryStatusLabel(request.status)
+        )}</span>
+      </div>
+      <p class="order-card__address">
+        ${escapeHtml(request.recipientName || "")}<br />
+        ${escapeHtml(request.recipientPhone || "")}<br />
+        ${escapeHtml(request.deliveryArea || "")}
+        ${instructions}
+      </p>
+    </div>
+  `;
 }
 
 /** Ordered line items. */
@@ -93,6 +129,12 @@ export function orderDetailsTemplate(order = {}) {
     ? `${methodText} · ${statusText}`
     : methodText;
 
+  const deliveryRequests = Array.isArray(order.deliveryRequests)
+    ? order.deliveryRequests
+    : order.delivery
+      ? [order.delivery]
+      : [];
+
   return `
     <div class="order-card__grid">
       <div>
@@ -122,6 +164,7 @@ export function orderDetailsTemplate(order = {}) {
         </div>
       </div>
     </div>
+    ${deliveryRequests.map(deliveryTemplate).join("")}
   `;
 }
 

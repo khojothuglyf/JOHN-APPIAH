@@ -33,6 +33,7 @@ import {
 } from "../services/paymentService.js";
 import { getCurrentUser, isAuthenticated } from "../services/authService.js";
 import { showToast } from "../components/toast.js";
+import { createDeliveryRequests } from "../services/deliveryService.js";
 
 const IMAGE_FALLBACK = pageUrl("images/placeholder.svg");
 
@@ -41,6 +42,8 @@ const page = {
   empty: null,
   page: null,
   paymentMethod: null,
+  deliveryChoice: null,
+  deliveryFields: null,
   summaryItems: null,
   summarySubtotal: null,
   summaryTotal: null,
@@ -51,6 +54,8 @@ document.addEventListener("DOMContentLoaded", () => {
   page.empty = $("[data-checkout-empty]");
   page.page = $("[data-checkout-page]");
   page.paymentMethod = $("[data-payment-method]");
+  page.deliveryChoice = $("[data-delivery-choice]");
+  page.deliveryFields = $("[data-delivery-request-fields]");
   page.summaryItems = $("[data-summary-items]");
   page.summarySubtotal = $("[data-summary-subtotal]");
   page.summaryTotal = $("[data-summary-total]");
@@ -72,6 +77,16 @@ function bindEvents() {
   page.form.addEventListener("submit", (event) => {
     event.preventDefault();
     placeOrder();
+  });
+  page.deliveryChoice?.addEventListener("change", toggleDeliveryFields);
+  toggleDeliveryFields();
+}
+
+function toggleDeliveryFields() {
+  const requested = page.deliveryChoice?.value === "REQUEST_DELIVERY";
+  if (page.deliveryFields) page.deliveryFields.hidden = !requested;
+  page.deliveryFields?.querySelectorAll("input, textarea").forEach((field) => {
+    field.disabled = !requested;
   });
 }
 
@@ -148,6 +163,20 @@ async function placeOrder() {
     // the returned order is the authoritative record.
     const order = await createOrder({ items: getCart(), shipping });
 
+    if (values.deliveryChoice === "REQUEST_DELIVERY") {
+      await createDeliveryRequests({
+        orderId: order.id,
+        items: getCart(),
+        details: {
+          recipientName: values.recipientName,
+          recipientPhone: values.recipientPhone,
+          deliveryArea: values.deliveryArea,
+          deliveryInstructions: values.deliveryInstructions,
+        },
+      });
+      order.deliveryRequested = true;
+    }
+
     // Initialize the payment against the order. Online methods return
     // a Paystack hosted-checkout URL; cash on delivery stays pending.
     // initializePayment recovers idempotently when this order already
@@ -196,7 +225,7 @@ async function placeOrder() {
 
 /** Validation rules for the delivery details and the payment method. */
 function buildRules() {
-  return {
+  const rules = {
     email: [validators.required, validators.email],
     firstName: [validators.required],
     lastName: [validators.required],
@@ -206,4 +235,11 @@ function buildRules() {
     country: [validators.required],
     paymentMethod: [validators.required],
   };
+  if (page.deliveryChoice?.value === "REQUEST_DELIVERY") {
+    rules.recipientName = [validators.required];
+    rules.recipientPhone = [validators.required];
+    rules.deliveryArea = [validators.required];
+    rules.deliveryInstructions = [validators.required];
+  }
+  return rules;
 }

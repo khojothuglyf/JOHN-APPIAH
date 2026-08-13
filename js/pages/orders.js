@@ -10,6 +10,7 @@
 import { $, escapeHtml } from "../utils/dom.js";
 import { formatCurrency } from "../utils/format.js";
 import { getOrders, syncOrders } from "../services/ordersService.js";
+import { listDeliveryRequests } from "../services/deliveryService.js";
 import {
   orderHeaderTemplate,
   orderItemsTemplate,
@@ -22,14 +23,38 @@ const page = {
   count: null,
 };
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   page.list = $("[data-orders]");
   page.empty = $("[data-orders-empty]");
   page.count = $("[data-orders-count]");
   if (!page.list) return;
 
-  syncOrders().then(() => render());
+  await syncOrders();
+  await attachDeliveryRequests();
+  render();
 });
+
+/** Attach the buyer's delivery requests to each cached order so the
+ *  cards can show the delivery arrangement. Best effort - the cards
+ *  simply omit the block when Supabase is unreachable. */
+async function attachDeliveryRequests() {
+  try {
+    const requests = await listDeliveryRequests();
+    const byOrder = new Map();
+    for (const request of requests) {
+      const key = String(request.orderId);
+      if (!byOrder.has(key)) byOrder.set(key, []);
+      byOrder.get(key).push(request);
+    }
+    for (const order of getOrders()) {
+      order.deliveryRequests = byOrder.get(String(order.id)) || [];
+    }
+  } catch {
+    for (const order of getOrders()) {
+      order.deliveryRequests = [];
+    }
+  }
+}
 
 function render() {
   const orders = getOrders();

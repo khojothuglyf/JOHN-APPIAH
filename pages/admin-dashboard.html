@@ -140,6 +140,15 @@
               <p class="stat-card__value" data-stat-revenue></p>
             </div>
           </div>
+          <div class="stat-card card">
+            <span class="stat-card__icon stat-card__icon--info">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35a1 1 0 0 0-.78-.38H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
+            </span>
+            <div>
+              <p class="stat-card__label">Delivery requests</p>
+              <p class="stat-card__value" data-stat-deliveries></p>
+            </div>
+          </div>
         </div>
 
         <div class="dashboard-tabs" role="tablist" aria-label="Dashboard sections">
@@ -152,6 +161,10 @@
           <button class="dashboard-tabs__tab" type="button"
             data-tab="orders" role="tab" aria-selected="false" aria-controls="orders-panel">
             Orders
+          </button>
+          <button class="dashboard-tabs__tab" type="button"
+            data-tab="deliveries" role="tab" aria-selected="false" aria-controls="deliveries-panel">
+            Deliveries
           </button>
           <button class="dashboard-tabs__tab" type="button"
             data-tab="analytics" role="tab" aria-selected="false" aria-controls="analytics-panel">
@@ -261,6 +274,33 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
             </span>
             <h2 class="page-placeholder__title">No orders on the platform</h2>
+          </div>
+        </section>
+
+        <section id="deliveries" data-panel="deliveries" role="tabpanel" aria-label="Deliveries" hidden>
+          <div class="dashboard-toolbar">
+            <h2 class="dashboard-section-title">Delivery requests <span data-deliveries-count></span></h2>
+          </div>
+          <div class="admin-table-wrap card" data-deliveries-table hidden>
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Recipient</th>
+                  <th>Area</th>
+                  <th>Requested</th>
+                  <th class="u-text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody data-deliveries-list></tbody>
+            </table>
+          </div>
+          <div class="page-placeholder" data-deliveries-empty hidden>
+            <span class="page-placeholder__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35a1 1 0 0 0-.78-.38H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
+            </span>
+            <h2 class="page-placeholder__title">No delivery requests</h2>
+            <p class="page-placeholder__text">Requests appear here when buyers ask sellers to arrange delivery.</p>
           </div>
         </section>
 

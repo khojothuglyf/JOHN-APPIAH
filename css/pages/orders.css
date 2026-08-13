@@ -176,6 +176,22 @@
   align-self: start;
 }
 
+/* ---- Delivery ---- */
+.order-card__delivery {
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  background-color: var(--color-surface-2);
+  border-radius: var(--radius-md);
+}
+
+.order-card__delivery-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
 /* ---- Actions ---- */
 .order-card__actions {
   display: flex;

@@ -11,6 +11,7 @@
 import { $, getQueryParam } from "../utils/dom.js";
 import { getOrder, getOrderById, recordPaymentForOrder } from "../services/ordersService.js";
 import { verifyPayment } from "../services/paymentService.js";
+import { listDeliveryRequests } from "../services/deliveryService.js";
 import {
   orderHeaderTemplate,
   orderItemsTemplate,
@@ -60,8 +61,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
+  await loadDeliveryRequests(order);
+
   render(order);
 });
+
+/** Attach the buyer's delivery requests for this order (best effort).
+ *  The card simply omits the delivery block when Supabase is
+ *  unreachable or the order has none. */
+async function loadDeliveryRequests(order) {
+  try {
+    const requests = await listDeliveryRequests();
+    order.deliveryRequests = requests.filter(
+      (request) => String(request.orderId) === String(order.id)
+    );
+  } catch {
+    order.deliveryRequests = [];
+  }
+}
 
 function render(order) {
   $("[data-confirmation-text]").textContent =

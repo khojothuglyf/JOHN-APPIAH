@@ -40,6 +40,10 @@ import {
   getRevenueTimeline,
 } from "../services/adminService.js";
 import { showToast } from "../components/toast.js";
+import {
+  getDeliveryStatusLabel,
+  listDeliveryRequests,
+} from "../services/deliveryService.js";
 
 const IMAGE_FALLBACK = pageUrl("images/placeholder.svg");
 
@@ -48,6 +52,7 @@ const page = {
   statProducts: null,
   statOrders: null,
   statRevenue: null,
+  statDeliveries: null,
   heroHealth: null,
   heroStatus: null,
   healthProgress: null,
@@ -75,6 +80,10 @@ const page = {
   ordersList: null,
   ordersEmpty: null,
   ordersCount: null,
+  deliveriesTable: null,
+  deliveriesList: null,
+  deliveriesEmpty: null,
+  deliveriesCount: null,
   analyticsError: null,
   analyticsErrorMessage: null,
   topProductsWrap: null,
@@ -89,6 +98,7 @@ const page = {
 };
 
 let adminSummary = null;
+let deliveryRequests = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!isAuthenticated()) {
@@ -115,6 +125,7 @@ document.addEventListener("DOMContentLoaded", () => {
   page.statProducts = $("[data-stat-products]");
   page.statOrders = $("[data-stat-orders]");
   page.statRevenue = $("[data-stat-revenue]");
+  page.statDeliveries = $("[data-stat-deliveries]");
   page.heroHealth = $("[data-platform-health]");
   page.heroStatus = $("[data-platform-status]");
   page.healthProgress = $("[data-health-progress]");
@@ -142,6 +153,10 @@ document.addEventListener("DOMContentLoaded", () => {
   page.ordersList = $("[data-orders-list]");
   page.ordersEmpty = $("[data-orders-empty]");
   page.ordersCount = $("[data-orders-count]");
+  page.deliveriesTable = $("[data-deliveries-table]");
+  page.deliveriesList = $("[data-deliveries-list]");
+  page.deliveriesEmpty = $("[data-deliveries-empty]");
+  page.deliveriesCount = $("[data-deliveries-count]");
   page.analyticsError = $("[data-analytics-error]");
   page.analyticsErrorMessage = $("[data-analytics-error-message]");
   page.topProductsWrap = $("[data-top-products-wrap]");
@@ -160,6 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
   bindEvents();
   loadDashboard();
   loadAnalytics();
+  loadDeliveryRequests();
 });
 
 /** Load users, categories, products, orders and the platform summary
@@ -385,6 +401,7 @@ function renderAll() {
   renderCategories();
   renderProducts();
   renderOrders();
+  renderDeliveries();
 }
 
 /* ---- Executive overview ---- */
@@ -462,6 +479,9 @@ function renderActivityList(users = [], products = []) {
 
 function renderStats() {
   const stats = adminSummary;
+  if (page.statDeliveries) {
+    page.statDeliveries.textContent = String(deliveryRequests.length);
+  }
   if (!stats) {
     page.statUsers.textContent = "—";
     page.statProducts.textContent = "—";
@@ -678,6 +698,64 @@ function orderRowTemplate(order = {}) {
           aria-label="Status for ${escapeHtml(label)}">
           ${statusOptions}
         </select>
+      </td>
+    </tr>
+  `;
+}
+
+/* ---- Delivery requests ---- */
+
+/** Load delivery requests (RLS lets admins see all) and render the
+ *  panel + stat. Best effort: failures leave the panel empty rather
+ *  than blocking the rest of the dashboard. */
+async function loadDeliveryRequests() {
+  try {
+    deliveryRequests = await listDeliveryRequests();
+  } catch {
+    deliveryRequests = [];
+  }
+  renderDeliveries();
+  renderStats();
+}
+
+function renderDeliveries() {
+  page.deliveriesCount.textContent = `(${deliveryRequests.length})`;
+
+  if (deliveryRequests.length === 0) {
+    page.deliveriesTable.hidden = true;
+    page.deliveriesEmpty.hidden = false;
+    return;
+  }
+
+  page.deliveriesTable.hidden = false;
+  page.deliveriesEmpty.hidden = true;
+  page.deliveriesList.innerHTML = deliveryRequests
+    .map(deliveryRowTemplate)
+    .join("");
+}
+
+function deliveryStatusClass(status) {
+  return {
+    REQUESTED: "badge--info",
+    DELIVERY_CONFIRMED: "badge--primary",
+    READY_FOR_DELIVERY: "badge--success",
+  }[status] || "badge--outline";
+}
+
+function deliveryRowTemplate(request = {}) {
+  return `
+    <tr>
+      <td>${escapeHtml(String(request.orderId))}</td>
+      <td>
+        ${escapeHtml(request.recipientName || "—")}
+        <br /><span class="admin-table__muted">${escapeHtml(request.recipientPhone || "")}</span>
+      </td>
+      <td>${escapeHtml(request.deliveryArea || "—")}</td>
+      <td>${escapeHtml(formatDate(request.createdAt) || "—")}</td>
+      <td class="u-text-right">
+        <span class="badge ${deliveryStatusClass(request.status)}">${escapeHtml(
+          getDeliveryStatusLabel(request.status)
+        )}</span>
       </td>
     </tr>
   `;
