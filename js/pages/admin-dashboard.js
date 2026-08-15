@@ -16,7 +16,7 @@
 
 import { $, escapeHtml, pageUrl, redirect } from "../utils/dom.js";
 import { formatCurrency, formatDate } from "../utils/format.js";
-import { getCurrentUser, getRole, getDisplayName, isAuthenticated, signInPreview } from "../services/authService.js";
+import { getCurrentUser, getRole, getDisplayName, isAuthenticated, refreshSession, signInPreview } from "../services/authService.js";
 import { USER_ROLES, isPreviewMode } from "../config.js";
 import { PRODUCT_STATUS } from "../services/sellerService.js";
 import { ORDER_STATUS, getOrderStatusLabel } from "../services/ordersService.js";
@@ -128,7 +128,7 @@ let adminFinanceSummary = null;
 let financeCommissions = [];
 let financeWithdrawals = [];
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   if (!isAuthenticated()) {
     if (isPreviewMode()) {
       signInPreview(USER_ROLES.ADMIN);
@@ -142,6 +142,14 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
   }
+
+  const session = await refreshSession();
+
+  if (!session) {
+    redirect("pages/login.html", { redirect: "pages/admin-dashboard.html" });
+    return;
+  }
+
   if (getRole() !== USER_ROLES.ADMIN) {
     redirect("index.html");
     return;

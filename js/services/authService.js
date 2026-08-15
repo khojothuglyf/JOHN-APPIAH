@@ -211,9 +211,11 @@ export function isPreviewSession() {
 /**
  * Revalidate the stored session against Supabase Auth and refresh the
  * cached user (so role/name changes from the server are picked up).
- * Expired access tokens are refreshed from the stored refresh token
- * when possible. Clears the session when the token is rejected (401)
- * so route guards always reflect server truth; network failures keep
+ * The access token is proactively exchanged from the stored refresh
+ * token (so an expired access token is never sent to backend calls);
+ * a session with no refresh token (e.g. dev preview/demo) is left
+ * untouched. Clears the session when the token is rejected (401) so
+ * route guards always reflect server truth; network failures keep
  * the local session. Dispatches "auth:changed" for the navbar to
  * re-render. Resolves to the current user (or null after a 401).
  */
@@ -221,7 +223,7 @@ export async function refreshSession() {
   let token = storage.get(STORAGE_KEYS.token);
   const refreshToken = storage.get(STORAGE_KEYS.refreshToken);
 
-  if (!token && refreshToken) {
+  if (refreshToken) {
     try {
       const body = await supabaseAuth.refreshSession(refreshToken);
       token = body.access_token ?? null;

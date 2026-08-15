@@ -79,12 +79,31 @@ async function parseResponse(response) {
   return body;
 }
 
+/** Marks a request that has already been retried after a token refresh. */
+const RETRIED = Symbol("http.retried");
+
+/** Single-flight token refresh shared by concurrent 401 handlers so an
+ *  expired-token burst triggers exactly one refresh operation. */
+let refreshInFlight = null;
+
+async function refreshAccessTokenOnce() {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      const { refreshSession } = await import("../services/authService.js");
+      return refreshSession();
+    })().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
 /**
  * Core request helper.
  * @param {string} path   API path (see API_ENDPOINTS) or absolute URL.
  * @param {object} options { method, body, params, headers, auth, timeout }
  */
-export async function request(path, options = {}) {
+async function performRequest(path, options = {}) {
   const {
     method = "GET",
     body = null,
@@ -125,6 +144,32 @@ export async function request(path, options = {}) {
     throw new ApiError(0, "Network error. Check your connection and try again.");
   } finally {
     clearTimeout(timer);
+  }
+}
+
+/**
+ * Public request entry point. On an authenticated 401 the session is
+ * refreshed once (single-flight; never for public requests) and the
+ * original request is retried exactly once before the auth error is
+ * surfaced. 403s and non-auth failures never trigger a refresh.
+ */
+export async function request(path, options = {}) {
+  const { auth = true } = options;
+  try {
+    return await performRequest(path, options);
+  } catch (error) {
+    if (
+      auth &&
+      error instanceof ApiError &&
+      error.status === 401 &&
+      !options[RETRIED]
+    ) {
+      const session = await refreshAccessTokenOnce();
+      if (session) {
+        return await performRequest(path, { ...options, [RETRIED]: true });
+      }
+    }
+    throw error;
   }
 }
 

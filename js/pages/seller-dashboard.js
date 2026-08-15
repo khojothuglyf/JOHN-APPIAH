@@ -21,6 +21,7 @@ import {
   getRole,
   getDisplayName,
   isAuthenticated,
+  refreshSession,
   signInPreview,
 } from "../services/authService.js";
 import { DEFAULT_CURRENCY, USER_ROLES, isPreviewMode } from "../config.js";
@@ -144,7 +145,7 @@ let walletWithdrawals = [];
  *  category id the backend API requires, never the Supabase id. */
 let categoryOptions = [];
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   if (!isAuthenticated()) {
     if (isPreviewMode()) {
       signInPreview(USER_ROLES.ADMIN);
@@ -158,6 +159,14 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
   }
+
+  const session = await refreshSession();
+
+  if (!session) {
+    redirect("pages/login.html", { redirect: "pages/seller-dashboard.html" });
+    return;
+  }
+
   const role = getRole();
   if (role !== USER_ROLES.SELLER && role !== USER_ROLES.ADMIN) {
     redirect("index.html");
