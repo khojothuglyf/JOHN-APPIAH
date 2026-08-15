@@ -2,7 +2,7 @@
   "name": "marketplace-system-frontend",
   "version": "1.0.0",
   "private": true,
-  "description": "TradeSphere frontend (HTML5, CSS3, ES6 modules). Phase 13 QA test suite.",
+  "description": "TradeWide frontend (HTML5, CSS3, ES6 modules). Phase 13 QA test suite.",
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",

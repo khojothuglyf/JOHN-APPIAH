@@ -1,7 +1,7 @@
 {
-  "name": "TradeSphere - Shop Smart, Live Better",
-  "short_name": "TradeSphere",
-  "description": "A modern e-commerce marketplace connecting buyers and trusted sellers.",
+  "name": "TradeWide - Buy. Sell. Trade Worldwide.",
+  "short_name": "TradeWide",
+  "description": "TradeWide is a global marketplace for buying and selling products.",
   "id": "/",
   "start_url": "./",
   "scope": "./",

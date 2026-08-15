@@ -47,11 +47,11 @@ function showBanner(ios) {
   banner.className = "install-banner";
   banner.setAttribute("data-install-banner", "");
   banner.setAttribute("role", "region");
-  banner.setAttribute("aria-label", "Install the TradeSphere app");
+  banner.setAttribute("aria-label", "Install the TradeWide app");
 
   const title = document.createElement("p");
   title.className = "install-banner__title";
-  title.textContent = ios ? "Install TradeSphere" : "Get the TradeSphere app";
+  title.textContent = ios ? "Install TradeWide" : "Get the TradeWide app";
 
   const text = document.createElement("p");
   text.className = "install-banner__text";

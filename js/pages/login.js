@@ -62,7 +62,11 @@ document.addEventListener("DOMContentLoaded", () => {
       setSession({ token, user });
 
       const redirectTo = getQueryParam("redirect");
-      const target = redirectTo
+      const safeRedirect =
+        redirectTo &&
+        !redirectTo.startsWith("//") &&
+        !/^[a-z][a-z0-9+.-]*:/i.test(redirectTo);
+      const target = safeRedirect
         ? redirectTo.startsWith("/")
           ? redirectTo
           : pageUrl(redirectTo)

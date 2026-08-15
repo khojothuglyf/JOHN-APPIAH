@@ -1,5 +1,5 @@
 /* ============================================================
-   TRADESPHERE - PRODUCTION ROLE MIGRATION (run once in the SQL Editor)
+   TRADEWIDE - PRODUCTION ROLE MIGRATION (run once in the SQL Editor)
    ============================================================
    Purpose
    -------

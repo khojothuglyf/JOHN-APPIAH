@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Dashboard | TradeSphere</title>
-    <meta name="description" content="Administrative tools for managing the TradeSphere platform." />
+    <title>Admin Dashboard | TradeWide</title>
+    <meta name="description" content="Administrative tools for managing the TradeWide platform." />
     <link rel="icon" href="../images/favicon.svg?v=ts-2" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,10 +18,10 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#2f6fed" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="application-name" content="TradeSphere" />
+    <meta name="application-name" content="TradeWide" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=ts-2" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="TradeSphere" />
+    <meta name="apple-mobile-web-app-title" content="TradeWide" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   </head>
   <body>
@@ -48,13 +48,13 @@
           <svg class="alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
           <div class="alert__content">
             <p class="alert__title">Couldn't load platform data</p>
-            <p data-dashboard-error-message>We couldn't reach the TradeSphere server. Your changes are safe; try refreshing in a moment.</p>
+            <p data-dashboard-error-message>We couldn't reach the TradeWide server. Your changes are safe; try refreshing in a moment.</p>
           </div>
         </div>
 
         <section class="dashboard-hero card" aria-label="Executive overview">
           <div class="dashboard-hero__content">
-            <p class="dashboard-hero__eyebrow">TradeSphere command center</p>
+            <p class="dashboard-hero__eyebrow">TradeWide command center</p>
             <h2 class="dashboard-hero__title">Run the storefront with Amazon-style clarity and speed.</h2>
             <p class="dashboard-hero__text">
               Track growth, protect catalog quality, and keep top-priority actions moving without leaving the dashboard.
@@ -165,6 +165,10 @@
           <button class="dashboard-tabs__tab" type="button"
             data-tab="deliveries" role="tab" aria-selected="false" aria-controls="deliveries-panel">
             Deliveries
+          </button>
+          <button class="dashboard-tabs__tab" type="button"
+            data-tab="finance" role="tab" aria-selected="false" aria-controls="finance-panel">
+            Finance
           </button>
           <button class="dashboard-tabs__tab" type="button"
             data-tab="analytics" role="tab" aria-selected="false" aria-controls="analytics-panel">
@@ -301,6 +305,99 @@
             </span>
             <h2 class="page-placeholder__title">No delivery requests</h2>
             <p class="page-placeholder__text">Requests appear here when buyers ask sellers to arrange delivery.</p>
+          </div>
+        </section>
+
+        <section id="finance" data-panel="finance" role="tabpanel" aria-label="Finance" hidden>
+          <div class="dashboard-toolbar">
+            <h2 class="dashboard-section-title">Finance</h2>
+            <p class="u-text-muted">
+              Commission collected from sales, released to sellers, and payout review.
+            </p>
+          </div>
+
+          <div class="alert alert--error" data-finance-error hidden role="alert">
+            <svg class="alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+            <div class="alert__content">
+              <p class="alert__title">Finance data unavailable</p>
+              <p data-finance-error-message>Platform finances could not be loaded right now. Please try again.</p>
+            </div>
+          </div>
+
+          <div class="insight-grid">
+            <article class="insight-card card">
+              <p class="insight-card__label">Commissions earned</p>
+              <strong class="insight-card__value" data-finance-earned>—</strong>
+              <p class="insight-card__meta">Platform share of sales</p>
+            </article>
+            <article class="insight-card card">
+              <p class="insight-card__label">Released to sellers</p>
+              <strong class="insight-card__value" data-finance-released>—</strong>
+              <p class="insight-card__meta">Commission made available</p>
+            </article>
+            <article class="insight-card card">
+              <p class="insight-card__label">Paid out</p>
+              <strong class="insight-card__value" data-finance-withdrawn>—</strong>
+              <p class="insight-card__meta">Withdrawals completed</p>
+            </article>
+            <article class="insight-card card">
+              <p class="insight-card__label">Pending review</p>
+              <strong class="insight-card__value" data-finance-pending-count>—</strong>
+              <p class="insight-card__meta" data-finance-pending-amount>Withdrawals awaiting action</p>
+            </article>
+          </div>
+
+          <div class="dashboard-toolbar">
+            <h3 class="dashboard-section-title">Commission ledger <span data-commissions-count></span></h3>
+          </div>
+          <div class="admin-table-wrap card" data-commissions-table hidden>
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Seller</th>
+                  <th>Order</th>
+                  <th>Date</th>
+                  <th class="u-text-right">Sale</th>
+                  <th class="u-text-right">Commission</th>
+                  <th class="u-text-right">Net</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody data-commissions-list></tbody>
+            </table>
+          </div>
+          <div class="page-placeholder" data-commissions-empty hidden>
+            <span class="page-placeholder__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </span>
+            <h3 class="page-placeholder__title">No commissions yet</h3>
+            <p class="page-placeholder__text">Commissions from completed sales will appear here.</p>
+          </div>
+
+          <div class="dashboard-toolbar">
+            <h3 class="dashboard-section-title">Withdrawal requests <span data-withdrawals-count></span></h3>
+          </div>
+          <div class="admin-table-wrap card" data-withdrawals-table hidden>
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Reference</th>
+                  <th>Account holder</th>
+                  <th>Date</th>
+                  <th class="u-text-right">Amount</th>
+                  <th>Status</th>
+                  <th class="u-text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody data-withdrawals-list></tbody>
+            </table>
+          </div>
+          <div class="page-placeholder" data-withdrawals-empty hidden>
+            <span class="page-placeholder__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            </span>
+            <h3 class="page-placeholder__title">No withdrawals to review</h3>
+            <p class="page-placeholder__text">Seller withdrawal requests will appear here.</p>
           </div>
         </section>
 

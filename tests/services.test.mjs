@@ -112,6 +112,20 @@ const run = async () => {
     ["admin.analytics.topProducts", "/admin/analytics/top-products"],
     ["admin.analytics.salesByCategory", "/admin/analytics/sales-by-category"],
     ["admin.analytics.revenueTimeline", "/admin/analytics/revenue-timeline"],
+    ["wallet.get", "/wallet"],
+    ["wallet.transactions", "/wallet/transactions"],
+    ["wallet.commissions", "/wallet/commissions"],
+    ["wallet.bankAccounts", "/wallet/bank-accounts"],
+    ["wallet.addBankAccount", "/wallet/bank-accounts"],
+    ["wallet.updateBankAccount", "/wallet/bank-accounts/{bankAccountId}"],
+    ["wallet.deleteBankAccount", "/wallet/bank-accounts/{bankAccountId}"],
+    ["wallet.withdrawals", "/wallet/withdrawals"],
+    ["wallet.requestWithdrawal", "/wallet/withdrawals"],
+    ["wallet.cancelWithdrawal", "/wallet/withdrawals/{withdrawalId}/cancel"],
+    ["finance.summary", "/admin/finance/summary"],
+    ["finance.commissions", "/admin/finance/commissions"],
+    ["finance.withdrawals", "/admin/finance/withdrawals"],
+    ["finance.updateWithdrawalStatus", "/admin/finance/withdrawals/{withdrawalId}/status"],
   ];
   for (const [key, path] of exact) {
     const entry = key.split(".").reduce((o, k) => o?.[k], API_ENDPOINTS);
@@ -139,6 +153,10 @@ const run = async () => {
   /* Phase 1 delivery-request mock state (PostgREST delivery_requests). */
   const deliveryStore = new Map();
   let deliverySeq = 900;
+
+  /* Settlement mock ids (wallet bank accounts / withdrawals). */
+  let bankAccountSeq = 700;
+  let withdrawalSeq = 800;
 
   const PRODUCT_ROW = {
     id: 7,
@@ -777,6 +795,143 @@ const run = async () => {
         ],
         timestamp: "2026-08-07T00:00:00Z",
       });
+    }
+
+    /* Spring Boot settlement backend (Phase 14: wallet + finance) */
+    const walletResponse = (overrides = {}) => ({
+      id: 1,
+      availableBalance: 250,
+      pendingBalance: 45,
+      totalEarned: 400,
+      totalWithdrawn: 100,
+      currency: "USD",
+      updatedAt: "2026-08-07T00:00:00",
+      ...overrides,
+    });
+    const commissionResponse = (overrides = {}) => ({
+      id: 10,
+      orderId: 42,
+      orderNumber: "ORD-260807-A1B2",
+      saleAmount: 99.98,
+      commissionAmount: 9.998,
+      netAmount: 89.982,
+      rate: 0.1,
+      currency: "USD",
+      status: "PENDING",
+      releasedAt: null,
+      createdAt: "2026-08-07T00:00:00",
+      ...overrides,
+    });
+    const transactionResponse = (overrides = {}) => ({
+      id: 20,
+      reference: "TXN-1",
+      type: "COMMISSION_CREDIT",
+      amount: 89.98,
+      balanceAfter: 89.98,
+      description: "Commission for order ORD-260807-A1B2",
+      orderId: 42,
+      commissionId: 10,
+      withdrawalId: null,
+      createdAt: "2026-08-07T00:00:00",
+      ...overrides,
+    });
+    const bankAccountResponse = (overrides = {}) => ({
+      id: 700,
+      bankName: "First Bank",
+      accountHolderName: "Jane Doe",
+      accountNumber: "0123456789",
+      swiftCode: "FBINNGLA",
+      country: "NG",
+      isDefault: true,
+      createdAt: "2026-08-07T00:00:00",
+      ...overrides,
+    });
+    const withdrawalResponse = (overrides = {}) => ({
+      id: 800,
+      reference: "WDR-00000800",
+      amount: 50,
+      currency: "USD",
+      status: "PENDING",
+      bankAccountId: 700,
+      bankName: "First Bank",
+      accountHolderName: "Jane Doe",
+      accountNumber: "0123456789",
+      note: null,
+      processedAt: null,
+      createdAt: "2026-08-07T00:00:00",
+      ...overrides,
+    });
+    const paged = (content) => ({
+      success: true,
+      message: "ok",
+      data: { content, page: 0, size: 20, totalElements: content.length, totalPages: 1, last: true },
+      timestamp: "2026-08-07T00:00:00Z",
+    });
+    const apiEnvelope = (data, message = "ok", status = 200) => ({
+      success: true,
+      message,
+      data,
+      timestamp: "2026-08-07T00:00:00Z",
+      status,
+    });
+
+    if (method === "GET" && pathname.endsWith("/api/v1/wallet")) {
+      return jsonResponse(apiEnvelope(walletResponse()));
+    }
+    if (method === "GET" && pathname.endsWith("/api/v1/wallet/transactions")) {
+      return jsonResponse(paged([transactionResponse()]));
+    }
+    if (method === "GET" && pathname.endsWith("/api/v1/wallet/commissions")) {
+      return jsonResponse(paged([commissionResponse()]));
+    }
+    if (method === "GET" && pathname.endsWith("/api/v1/wallet/bank-accounts")) {
+      return jsonResponse(apiEnvelope([bankAccountResponse()]));
+    }
+    if (method === "POST" && pathname.endsWith("/api/v1/wallet/bank-accounts")) {
+      const created = bankAccountResponse({ id: ++bankAccountSeq, ...body });
+      return jsonResponse(apiEnvelope(created, "Bank account saved"), { status: 201 });
+    }
+    if (method === "PUT" && /\/api\/v1\/wallet\/bank-accounts\/\d+$/.test(pathname)) {
+      const id = Number(pathname.match(/\/bank-accounts\/(\d+)$/)[1]);
+      return jsonResponse(apiEnvelope(bankAccountResponse({ id, ...body }), "Bank account updated"));
+    }
+    if (method === "DELETE" && /\/api\/v1\/wallet\/bank-accounts\/\d+$/.test(pathname)) {
+      return jsonResponse(apiEnvelope(null, "Bank account deleted"));
+    }
+    if (method === "POST" && pathname.endsWith("/api/v1/wallet/withdrawals")) {
+      const created = withdrawalResponse({
+        id: ++withdrawalSeq,
+        reference: `WDR-${String(withdrawalSeq).padStart(8, "0")}`,
+        amount: body?.amount,
+        bankAccountId: body?.bankAccountId ?? null,
+      });
+      return jsonResponse(apiEnvelope(created, "Withdrawal requested"), { status: 201 });
+    }
+    if (method === "GET" && pathname.endsWith("/api/v1/wallet/withdrawals")) {
+      return jsonResponse(paged([withdrawalResponse()]));
+    }
+    if (method === "POST" && /\/api\/v1\/wallet\/withdrawals\/\d+\/cancel$/.test(pathname)) {
+      return jsonResponse(apiEnvelope(withdrawalResponse({ status: "CANCELLED" }), "Withdrawal cancelled"));
+    }
+
+    if (method === "GET" && pathname.endsWith("/api/v1/admin/finance/summary")) {
+      return jsonResponse(apiEnvelope({
+        totalCommissionEarned: 40,
+        totalCommissionReleased: 30,
+        totalWithdrawn: 100,
+        pendingWithdrawals: 50,
+        pendingWithdrawalCount: 1,
+        completedWithdrawalCount: 3,
+      }));
+    }
+    if (method === "GET" && pathname.endsWith("/api/v1/admin/finance/commissions")) {
+      return jsonResponse(paged([commissionResponse({ status: "RELEASED" })]));
+    }
+    if (method === "GET" && pathname.endsWith("/api/v1/admin/finance/withdrawals")) {
+      return jsonResponse(paged([withdrawalResponse()]));
+    }
+    if (method === "PUT" && /\/api\/v1\/admin\/finance\/withdrawals\/\d+\/status$/.test(pathname)) {
+      return jsonResponse(apiEnvelope(withdrawalResponse({ status: body?.status, note: body?.note }), "Withdrawal status updated"));
     }
 
     throw new Error(`Unmapped route: ${method} ${url}`);
@@ -1901,6 +2056,170 @@ const run = async () => {
   const atl = await admin.getRevenueTimeline(30);
   check(atl.length === 2 && atl[0].amount === 49.99, "getRevenueTimeline maps daily revenue");
   check(requests[requests.length - 1].url.includes("days=30"), "revenue timeline sends the days param");
+
+  // Restore a session for the later profile tests.
+  auth.setSession({
+    token: "TOK-1",
+    user: { id: "u1", firstName: "Jane", lastName: "Doe", email: "jane@t.com", role: "SELLER" },
+  });
+
+  /* ==========================================================
+     [J2] Seller wallet service (Spring Boot settlement backend)
+     ========================================================== */
+  section("sellerWalletService");
+  const walletSvc = await import(app("js/services/sellerWalletService.js"));
+  check(walletSvc.COMMISSION_RATE === 0.1, "COMMISSION_RATE mirrors the backend default");
+  check(walletSvc.MIN_WITHDRAWAL_AMOUNT === 10, "MIN_WITHDRAWAL_AMOUNT mirrors the backend default");
+  check(
+    walletSvc.WITHDRAWAL_STATUS.PENDING === "PENDING" &&
+      walletSvc.WITHDRAWAL_STATUS.PROCESSING === "PROCESSING" &&
+      walletSvc.WITHDRAWAL_STATUS.COMPLETED === "COMPLETED" &&
+      walletSvc.WITHDRAWAL_STATUS.REJECTED === "REJECTED" &&
+      walletSvc.WITHDRAWAL_STATUS.CANCELLED === "CANCELLED",
+    "WITHDRAWAL_STATUS matches the backend enum"
+  );
+  check(
+    walletSvc.COMMISSION_STATUS.PENDING === "PENDING" &&
+      walletSvc.COMMISSION_STATUS.RELEASED === "RELEASED" &&
+      walletSvc.COMMISSION_STATUS.REVERSED === "REVERSED",
+    "COMMISSION_STATUS matches the backend enum"
+  );
+  check(walletSvc.getWithdrawalStatusLabel("PROCESSING") === "Processing", "withdrawal status labels are human-readable");
+  check(walletSvc.getCommissionStatusLabel("REVERSED") === "Reversed", "commission status labels are human-readable");
+  check(walletSvc.getTransactionTypeLabel("WITHDRAWAL_RELEASE") === "Funds returned", "transaction types map to labels");
+  check(walletSvc.transactionAmountSigned("COMMISSION_CREDIT", 50) === 50, "credits render positive");
+  check(walletSvc.transactionAmountSigned("WITHDRAWAL_HOLD", 50) === -50, "withdrawal holds render negative");
+  check(walletSvc.transactionAmountSigned("PAYOUT", 50) === -50, "PAYOUT renders as a debit");
+
+  // Signed out: wallet reads reject 401 without a request.
+  auth.logout();
+  const walletSignedOutStart = requests.length;
+  let walletAuthError = null;
+  try { await walletSvc.getWallet(); } catch (e) { walletAuthError = e; }
+  check(walletAuthError?.status === 401, "signed-out wallet read rejects 401");
+  check(requests.length === walletSignedOutStart, "signed-out wallet read makes no request");
+
+  // Signed in: the wallet ledger maps backend amounts + currency.
+  auth.setSession({
+    token: "TOK-1",
+    user: { id: "u1", firstName: "Jane", lastName: "Doe", email: "jane@t.com", role: "SELLER" },
+  });
+  const w = await walletSvc.getWallet();
+  const walletReq = requests[requests.length - 1];
+  check(walletReq?.method === "GET" && walletReq.url.includes("/api/v1/wallet"), "getWallet GETs /api/v1/wallet");
+  check(walletReq?.headers?.Authorization === "Bearer TOK-1", "wallet reads send the Supabase token as Bearer");
+  check(w.availableBalance === 250 && w.pendingBalance === 45, "wallet balances map from the backend");
+  check(w.totalEarned === 400 && w.totalWithdrawn === 100 && w.currency === "USD", "wallet totals + currency map from the backend");
+
+  const txns = await walletSvc.getWalletTransactions();
+  const txReq = requests[requests.length - 1];
+  check(Array.isArray(txns) && txns[0]?.type === "COMMISSION_CREDIT" && txns[0]?.amount === 89.98, "transactions unwrap the paged content");
+  check(txReq?.url.includes("/api/v1/wallet/transactions") && txReq.url.includes("size=20"), "transactions hit /wallet/transactions with paging");
+
+  const commissions = await walletSvc.getCommissions();
+  check(commissions[0]?.orderNumber === "ORD-260807-A1B2" && commissions[0]?.netAmount === 89.982, "commissions map net earnings");
+  check(commissions[0]?.rate === 0.1 && commissions[0]?.status === "PENDING", "commission rate + status map through");
+
+  // Bank accounts: list, add, update, delete.
+  const accounts = await walletSvc.getBankAccounts();
+  check(Array.isArray(accounts) && accounts[0]?.bankName === "First Bank" && accounts[0]?.isDefault === true, "bank accounts list maps");
+  const addStart = requests.length;
+  const added = await walletSvc.addBankAccount({
+    bankName: "Zenith",
+    accountHolderName: "Jane Doe",
+    accountNumber: "1122334455",
+    isDefault: true,
+  });
+  const addReq = requests[addStart];
+  check(addReq?.method === "POST" && addReq.url.includes("/api/v1/wallet/bank-accounts"), "addBankAccount POSTs /wallet/bank-accounts");
+  const addBody = JSON.parse(addReq.body);
+  check(addBody.bankName === "Zenith" && addBody.accountNumber === "1122334455" && addBody.isDefault === true, "addBankAccount sends the request fields");
+  check(added?.id > 700 && added?.bankName === "Zenith", "addBankAccount unwraps the created account");
+
+  const updatedAccount = await walletSvc.updateBankAccount(added.id, {
+    bankName: "Zenith Bank",
+    accountNumber: "1122334455",
+    isDefault: false,
+  });
+  const putReq = requests[requests.length - 1];
+  check(putReq?.method === "PUT" && putReq.url.includes(`/api/v1/wallet/bank-accounts/${added.id}`), "updateBankAccount PUTs /bank-accounts/{id}");
+  check(updatedAccount?.bankName === "Zenith Bank" && updatedAccount?.isDefault === false, "updateBankAccount returns the updated account");
+
+  const delStart = requests.length;
+  check(await walletSvc.deleteBankAccount(added.id) === true, "deleteBankAccount resolves true");
+  check(requests[delStart]?.method === "DELETE" && requests[delStart].url.includes(`/api/v1/wallet/bank-accounts/${added.id}`), "deleteBankAccount DELETEs /bank-accounts/{id}");
+
+  // Withdrawals: request, list, cancel.
+  const reqStart = requests.length;
+  const withdrawal = await walletSvc.requestWithdrawal({ amount: 50, bankAccountId: 700 });
+  const reqBody = JSON.parse(requests[reqStart].body);
+  check(requests[reqStart]?.method === "POST" && requests[reqStart].url.includes("/api/v1/wallet/withdrawals"), "requestWithdrawal POSTs /wallet/withdrawals");
+  check(reqBody.amount === 50 && reqBody.bankAccountId === 700, "withdrawal request sends amount + bankAccountId");
+  check(withdrawal?.status === "PENDING" && withdrawal?.reference?.startsWith("WDR-"), "requestWithdrawal unwraps the pending withdrawal");
+
+  const history = await walletSvc.getWithdrawals();
+  check(Array.isArray(history) && history[0]?.status === "PENDING" && history[0]?.bankName === "First Bank", "withdrawal history maps");
+  check(requests[requests.length - 1].url.includes("/api/v1/wallet/withdrawals"), "withdrawal history GETs /wallet/withdrawals");
+
+  const cancelled = await walletSvc.cancelWithdrawal(withdrawal.id);
+  check(cancelled?.status === "CANCELLED", "cancelWithdrawal returns the cancelled withdrawal");
+  check(requests[requests.length - 1].url.includes(`/api/v1/wallet/withdrawals/${withdrawal.id}/cancel`), "cancel targets /withdrawals/{id}/cancel");
+
+  /* ==========================================================
+     [J3] Admin finance service (Spring Boot settlement backend)
+     ========================================================== */
+  section("adminFinanceService");
+  const finance = await import(app("js/services/adminFinanceService.js"));
+  check(finance.WITHDRAWAL_STATUS.PROCESSING === "PROCESSING" && finance.COMMISSION_STATUS.RELEASED === "RELEASED", "finance re-exports the wallet enums");
+  check(finance.getWithdrawalStatusLabel("COMPLETED") === "Paid out", "finance re-exports withdrawal labels");
+
+  // Non-admin sessions are rejected locally before any request.
+  const beforeFinance403 = requests.length;
+  let financeRoleError = null;
+  try { await finance.getFinanceSummary(); } catch (e) { financeRoleError = e; }
+  check(financeRoleError?.status === 403, "non-admin finance read rejects 403");
+  check(requests.length === beforeFinance403, "finance 403 is enforced locally without a request");
+
+  // Signed out: admin finance rejects 401 before any request.
+  auth.logout();
+  const financeSignedOutStart = requests.length;
+  let financeAuthError = null;
+  try { await finance.getWithdrawals(); } catch (e) { financeAuthError = e; }
+  check(financeAuthError?.status === 401, "signed-out finance read rejects 401");
+  check(requests.length === financeSignedOutStart, "signed-out finance read makes no request");
+
+  // ADMIN session: summary + ledger reads.
+  auth.setSession({
+    token: "TOK-1",
+    user: { id: "u1", firstName: "Ada", lastName: "Lovelace", email: "ada@t.com", role: "ADMIN" },
+  });
+  const fsum = await finance.getFinanceSummary();
+  const fsumReq = requests[requests.length - 1];
+  check(fsumReq?.method === "GET" && fsumReq.url.includes("/api/v1/admin/finance/summary"), "getFinanceSummary GETs /admin/finance/summary");
+  check(fsumReq?.headers?.Authorization === "Bearer TOK-1", "finance reads send the Supabase token as Bearer");
+  check(fsum.totalCommissionEarned === 40 && fsum.totalCommissionReleased === 30 && fsum.totalWithdrawn === 100, "summary maps commission + payout totals");
+  check(fsum.pendingWithdrawals === 50 && fsum.pendingWithdrawalCount === 1, "summary maps pending withdrawals");
+
+  const fcomm = await finance.getAllCommissions();
+  check(Array.isArray(fcomm) && fcomm[0]?.status === "RELEASED" && fcomm[0]?.sellerId === null, "commission ledger maps backend rows");
+  check(requests[requests.length - 1].url.includes("/api/v1/admin/finance/commissions"), "commissions ledger GETs /admin/finance/commissions");
+
+  const fwith = await finance.getWithdrawals();
+  check(fwith[0]?.status === "PENDING" && fwith[0]?.amount === 50, "withdrawal list maps");
+
+  // Status transitions: PROCESSING, COMPLETED, REJECTED + notes.
+  const advStart = requests.length;
+  const approved = await finance.updateWithdrawalStatus(800, finance.WITHDRAWAL_STATUS.PROCESSING);
+  const advReq = requests[advStart];
+  check(advReq?.method === "PUT" && advReq.url.includes("/api/v1/admin/finance/withdrawals/800/status"), "updateWithdrawalStatus PUTs /admin/finance/withdrawals/{id}/status");
+  check(JSON.parse(advReq.body)?.status === "PROCESSING" && JSON.parse(advReq.body)?.note === null, "status update sends { status, note }");
+  check(approved?.status === "PROCESSING", "updateWithdrawalStatus returns the advanced withdrawal");
+
+  const paidWithdrawal = await finance.updateWithdrawalStatus(800, finance.WITHDRAWAL_STATUS.COMPLETED, "Paid via First Bank");
+  check(paidWithdrawal?.status === "COMPLETED" && JSON.parse(requests[requests.length - 1].body)?.note === "Paid via First Bank", "completion carries an optional note");
+
+  check(await finance.updateWithdrawalStatus(800, "NOPE") === null, "invalid status target is rejected without a request");
+  check(requests.length === advStart + 2, "invalid status makes no extra request");
 
   // Restore a session for the later profile tests.
   auth.setSession({

@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Seller Dashboard | TradeSphere</title>
-    <meta name="description" content="Manage your products, orders and sales as a TradeSphere seller." />
+    <title>Seller Dashboard | TradeWide</title>
+    <meta name="description" content="Manage your products, orders and sales as a TradeWide seller." />
     <link rel="icon" href="../images/favicon.svg?v=ts-2" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,10 +18,10 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#2f6fed" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="application-name" content="TradeSphere" />
+    <meta name="application-name" content="TradeWide" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=ts-2" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="TradeSphere" />
+    <meta name="apple-mobile-web-app-title" content="TradeWide" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   </head>
   <body>
@@ -48,7 +48,7 @@
           <svg class="alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
           <div class="alert__content">
             <p class="alert__title">Couldn't load your seller data</p>
-            <p data-dashboard-error-message>We couldn't reach the TradeSphere server. Your changes are safe; try refreshing in a moment.</p>
+            <p data-dashboard-error-message>We couldn't reach the TradeWide server. Your changes are safe; try refreshing in a moment.</p>
           </div>
         </div>
 
@@ -101,6 +101,10 @@
             Orders
           </button>
           <button class="dashboard-tabs__tab" type="button"
+            data-tab="finance" role="tab" aria-selected="false" aria-controls="finance-panel">
+            Finance
+          </button>
+          <button class="dashboard-tabs__tab" type="button"
             data-tab="analytics" role="tab" aria-selected="false" aria-controls="analytics-panel">
             Analytics
           </button>
@@ -135,7 +139,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1Z"/></svg>
             </span>
             <h2 class="page-placeholder__title">No products yet</h2>
-            <p class="page-placeholder__text">Add your first product to start selling on TradeSphere.</p>
+            <p class="page-placeholder__text">Add your first product to start selling on TradeWide.</p>
             <button class="btn btn--primary" type="button" data-add-product>Add product</button>
           </div>
         </section>
@@ -153,6 +157,199 @@
             <p class="page-placeholder__text">
               Orders placed through checkout will appear here for fulfilment.
             </p>
+          </div>
+        </section>
+
+        <section data-panel="finance" role="tabpanel" aria-label="Finance" hidden>
+          <div class="dashboard-toolbar">
+            <h2 class="dashboard-section-title">Wallet &amp; payouts</h2>
+            <p class="u-text-muted">A 10% commission is withheld from every sale; your net earnings land here.</p>
+          </div>
+
+          <div class="alert alert--error" data-finance-error hidden role="alert">
+            <svg class="alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+            <div class="alert__content">
+              <p class="alert__title">Wallet unavailable</p>
+              <p data-finance-error-message>Your wallet could not be loaded right now. Please try again.</p>
+            </div>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-card card">
+              <span class="stat-card__icon stat-card__icon--success">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              </span>
+              <div>
+                <p class="stat-card__label">Available</p>
+                <p class="stat-card__value" data-stat-available></p>
+              </div>
+            </div>
+            <div class="stat-card card">
+              <span class="stat-card__icon stat-card__icon--warning">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              </span>
+              <div>
+                <p class="stat-card__label">Pending release</p>
+                <p class="stat-card__value" data-stat-pending></p>
+              </div>
+            </div>
+            <div class="stat-card card">
+              <span class="stat-card__icon stat-card__icon--primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+              </span>
+              <div>
+                <p class="stat-card__label">Total earned</p>
+                <p class="stat-card__value" data-stat-earned></p>
+              </div>
+            </div>
+            <div class="stat-card card">
+              <span class="stat-card__icon stat-card__icon--info">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+              </span>
+              <div>
+                <p class="stat-card__label">Withdrawn</p>
+                <p class="stat-card__value" data-stat-withdrawn></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="wallet-grid">
+            <div class="wallet-panel card">
+              <h3 class="wallet-panel__title">Withdraw funds</h3>
+              <p class="wallet-panel__copy">
+                Available earnings can be withdrawn to a saved bank account. Funds are held while the request is reviewed.
+              </p>
+              <form data-withdraw-form novalidate>
+                <div class="form-group" data-field="amount">
+                  <label class="form-label" for="withdraw-amount">Amount <span class="form-required">*</span></label>
+                  <input class="form-input" id="withdraw-amount" type="number" name="amount" min="0.01" step="0.01" placeholder="0.00" />
+                  <p class="form-error" data-error></p>
+                </div>
+                <div class="form-group" data-field="bankAccountId">
+                  <label class="form-label" for="withdraw-bank">Bank account</label>
+                  <select class="form-select" id="withdraw-bank" name="bankAccountId" data-withdraw-bank>
+                    <option value="">Default account</option>
+                  </select>
+                  <p class="form-error" data-error></p>
+                </div>
+                <p class="wallet-panel__hint" data-withdraw-hint></p>
+                <button class="btn btn--primary" type="submit" data-submit>
+                  <span data-submit-spinner class="spinner spinner--sm" hidden></span>
+                  Request withdrawal
+                </button>
+              </form>
+            </div>
+
+            <div class="wallet-panel card">
+              <h3 class="wallet-panel__title">Bank accounts</h3>
+              <form data-bank-form novalidate>
+                <input type="hidden" name="isDefault" value="1" />
+                <div class="form-group" data-field="bankName">
+                  <label class="form-label" for="bank-name">Bank name <span class="form-required">*</span></label>
+                  <input class="form-input" id="bank-name" type="text" name="bankName" placeholder="e.g. First Bank" />
+                  <p class="form-error" data-error></p>
+                </div>
+                <div class="form-grid form-grid--2">
+                  <div class="form-group" data-field="accountHolderName">
+                    <label class="form-label" for="bank-holder">Account holder <span class="form-required">*</span></label>
+                    <input class="form-input" id="bank-holder" type="text" name="accountHolderName" placeholder="Name on the account" />
+                    <p class="form-error" data-error></p>
+                  </div>
+                  <div class="form-group" data-field="accountNumber">
+                    <label class="form-label" for="bank-number">Account number <span class="form-required">*</span></label>
+                    <input class="form-input" id="bank-number" type="text" name="accountNumber" placeholder="e.g. 0123456789" />
+                    <p class="form-error" data-error></p>
+                  </div>
+                </div>
+                <div class="form-group" data-field="swiftCode">
+                  <label class="form-label" for="bank-swift">SWIFT / BIC code</label>
+                  <input class="form-input" id="bank-swift" type="text" name="swiftCode" placeholder="Optional" />
+                  <p class="form-error" data-error></p>
+                </div>
+                <button class="btn btn--outline btn--sm" type="submit">Save account</button>
+              </form>
+              <ul class="bank-accounts" data-bank-accounts-list></ul>
+              <p class="page-placeholder__text" data-bank-accounts-empty hidden>
+                No bank accounts saved yet. Add one to request a withdrawal.
+              </p>
+            </div>
+          </div>
+
+          <div class="dashboard-toolbar">
+            <h3 class="dashboard-section-title">Commissions</h3>
+          </div>
+          <div class="seller-table-wrap card" data-commissions-wrap hidden>
+            <table class="seller-table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Date</th>
+                  <th class="u-text-right">Sale</th>
+                  <th class="u-text-right">Commission</th>
+                  <th class="u-text-right">You earn</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody data-commissions-list></tbody>
+            </table>
+          </div>
+          <div class="page-placeholder" data-commissions-empty hidden>
+            <span class="page-placeholder__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+            </span>
+            <h3 class="page-placeholder__title">No commissions yet</h3>
+            <p class="page-placeholder__text">Commissions from completed orders will appear here.</p>
+          </div>
+
+          <div class="dashboard-toolbar">
+            <h3 class="dashboard-section-title">Transactions</h3>
+          </div>
+          <div class="seller-table-wrap card" data-transactions-wrap hidden>
+            <table class="seller-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Description</th>
+                  <th class="u-text-right">Amount</th>
+                  <th class="u-text-right">Available after</th>
+                </tr>
+              </thead>
+              <tbody data-transactions-list></tbody>
+            </table>
+          </div>
+          <div class="page-placeholder" data-transactions-empty hidden>
+            <span class="page-placeholder__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35a1 1 0 0 0-.78-.38H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
+            </span>
+            <h3 class="page-placeholder__title">No transactions yet</h3>
+            <p class="page-placeholder__text">Your wallet ledger will appear here.</p>
+          </div>
+
+          <div class="dashboard-toolbar">
+            <h3 class="dashboard-section-title">Withdrawal history</h3>
+          </div>
+          <div class="seller-table-wrap card" data-withdrawals-wrap hidden>
+            <table class="seller-table">
+              <thead>
+                <tr>
+                  <th>Reference</th>
+                  <th>Date</th>
+                  <th class="u-text-right">Amount</th>
+                  <th>Bank</th>
+                  <th>Status</th>
+                  <th class="u-text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody data-withdrawals-list></tbody>
+            </table>
+          </div>
+          <div class="page-placeholder" data-withdrawals-empty hidden>
+            <span class="page-placeholder__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            </span>
+            <h3 class="page-placeholder__title">No withdrawals yet</h3>
+            <p class="page-placeholder__text">Withdrawals you request will appear here.</p>
           </div>
         </section>
 

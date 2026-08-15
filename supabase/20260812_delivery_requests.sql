@@ -1,5 +1,5 @@
 /* Phase 1 delivery requests. Safe to run more than once. Delivery is
-   arranged directly by the seller and buyer; TradeSphere does not provide
+   arranged directly by the seller and buyer; TradeWide does not provide
    riders, fees, tracking, or fulfilment. */
 
 create table if not exists public.delivery_requests (
@@ -31,7 +31,10 @@ create trigger delivery_requests_set_updated_at
 
 /* A request is visible only to its buyer, assigned seller, or an admin.
    The seller can change only the delivery-state fields; recipient details
-   and ownership cannot be changed through the browser. */
+   and ownership cannot be changed through the browser. The WITH CHECK
+   below locks every non-status column to its existing value, so a seller
+   can never rewrite recipient PII, reassign the request to another buyer,
+   or point it at a different order. */
 drop policy if exists delivery_requests_select_participants on public.delivery_requests;
 create policy delivery_requests_select_participants on public.delivery_requests
   for select using (
@@ -49,5 +52,19 @@ create policy delivery_requests_seller_update_status on public.delivery_requests
   for update using (auth.uid() = seller_id or public.is_admin())
   with check (
     (public.is_admin()) or
-    (auth.uid() = seller_id and status in ('DELIVERY_CONFIRMED', 'READY_FOR_DELIVERY'))
+    (
+      auth.uid() = seller_id
+      and status in ('DELIVERY_CONFIRMED', 'READY_FOR_DELIVERY')
+      and exists (
+        select 1 from public.delivery_requests prev
+        where prev.id = delivery_requests.id
+          and prev.order_id = delivery_requests.order_id
+          and prev.buyer_id = delivery_requests.buyer_id
+          and prev.seller_id = delivery_requests.seller_id
+          and prev.recipient_name = delivery_requests.recipient_name
+          and prev.recipient_phone = delivery_requests.recipient_phone
+          and prev.delivery_area = delivery_requests.delivery_area
+          and prev.delivery_instructions = delivery_requests.delivery_instructions
+      )
+    )
   );

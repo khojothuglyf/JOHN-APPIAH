@@ -1,4 +1,4 @@
-# TradeSphere - Launch Checklist
+# TradeWide - Launch Checklist
 
 Manual steps to run before/at launch. No data is deleted and no admin
 is created by any script in this repo.

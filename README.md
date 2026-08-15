@@ -1,4 +1,4 @@
-# TradeSphere - Frontend
+# TradeWide - Frontend
 
 A professional, responsive e-commerce web application. This repository contains
 **only the frontend** (HTML5, CSS3, ES6+ JavaScript). The storefront data
@@ -183,7 +183,7 @@ The site is a fully installable PWA:
 - `pages/offline.html` - friendly fallback when the network is gone.
 - Auto-updates: the service worker checks for changes on load and on window
   focus and activates new versions immediately.
-- Install prompts: Android/desktop browsers show a "Get the TradeSphere app"
+- Install prompts: Android/desktop browsers show a "Get the TradeWide app"
   banner; iOS Safari shows a one-time "Add to Home Screen" hint.
 
 To install once deployed: use the browser's install button (address bar /

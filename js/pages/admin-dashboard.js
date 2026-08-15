@@ -44,6 +44,16 @@ import {
   getDeliveryStatusLabel,
   listDeliveryRequests,
 } from "../services/deliveryService.js";
+import {
+  COMMISSION_STATUS,
+  WITHDRAWAL_STATUS,
+  getAllCommissions,
+  getCommissionStatusLabel,
+  getFinanceSummary,
+  getWithdrawalStatusLabel,
+  getWithdrawals,
+  updateWithdrawalStatus,
+} from "../services/adminFinanceService.js";
 
 const IMAGE_FALLBACK = pageUrl("images/placeholder.svg");
 
@@ -95,10 +105,28 @@ const page = {
   timelineWrap: null,
   timelineList: null,
   timelineEmpty: null,
+  financeError: null,
+  financeErrorMessage: null,
+  financeEarned: null,
+  financeReleased: null,
+  financeWithdrawn: null,
+  financePendingCount: null,
+  financePendingAmount: null,
+  commissionsCount: null,
+  commissionsTable: null,
+  commissionsList: null,
+  commissionsEmpty: null,
+  withdrawalsCount: null,
+  withdrawalsTable: null,
+  withdrawalsList: null,
+  withdrawalsEmpty: null,
 };
 
 let adminSummary = null;
 let deliveryRequests = [];
+let adminFinanceSummary = null;
+let financeCommissions = [];
+let financeWithdrawals = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!isAuthenticated()) {
@@ -169,12 +197,28 @@ document.addEventListener("DOMContentLoaded", () => {
   page.timelineList = $("[data-timeline-list]");
   page.timelineEmpty = $("[data-timeline-empty]");
   page.activityList = $("[data-activity-list]");
+  page.financeError = $("[data-finance-error]");
+  page.financeErrorMessage = $("[data-finance-error-message]");
+  page.financeEarned = $("[data-finance-earned]");
+  page.financeReleased = $("[data-finance-released]");
+  page.financeWithdrawn = $("[data-finance-withdrawn]");
+  page.financePendingCount = $("[data-finance-pending-count]");
+  page.financePendingAmount = $("[data-finance-pending-amount]");
+  page.commissionsCount = $("[data-commissions-count]");
+  page.commissionsTable = $("[data-commissions-table]");
+  page.commissionsList = $("[data-commissions-list]");
+  page.commissionsEmpty = $("[data-commissions-empty]");
+  page.withdrawalsCount = $("[data-withdrawals-count]");
+  page.withdrawalsTable = $("[data-withdrawals-table]");
+  page.withdrawalsList = $("[data-withdrawals-list]");
+  page.withdrawalsEmpty = $("[data-withdrawals-empty]");
 
   $("[data-admin-name]").textContent = getDisplayName() || "Admin";
 
   bindEvents();
   loadDashboard();
   loadAnalytics();
+  loadFinance();
   loadDeliveryRequests();
 });
 
@@ -390,6 +434,42 @@ function bindEvents() {
       renderOrders();
       renderStats();
       select.disabled = false;
+    }
+  });
+
+  // Withdrawal status actions (approve / complete / reject)
+  page.withdrawalsList.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-withdrawal-status]");
+    if (!button) return;
+
+    button.disabled = true;
+    try {
+      const withdrawal = await updateWithdrawalStatus(
+        button.dataset.withdrawalStatus,
+        button.dataset.to
+      );
+      if (!withdrawal) {
+        showToast({
+          title: "Update failed",
+          message: "That action is not allowed for this withdrawal.",
+          type: "error",
+        });
+        return;
+      }
+      showToast({
+        title: "Withdrawal updated",
+        message: `${withdrawal.reference} is now ${getWithdrawalStatusLabel(withdrawal.status).toLowerCase()}.`,
+        type: "success",
+      });
+      await reloadFinance();
+    } catch (error) {
+      showToast({
+        title: "Update failed",
+        message:
+          error?.message || "The withdrawal status could not be updated.",
+        type: "error",
+      });
+      button.disabled = false;
     }
   });
 }
@@ -839,6 +919,197 @@ function timelineRowTemplate(point = {}) {
     <tr>
       <td>${escapeHtml(point.date || "—")}</td>
       <td class="u-text-right">${formatCurrency(point.amount)}</td>
+    </tr>
+  `;
+}
+
+/* ---- Finance ---- */
+
+/** Load platform finance from the backend. Failures surface the
+ *  finance error banner instead of fabricated numbers. */
+async function loadFinance() {
+  const [summary, commissions, withdrawals] = await Promise.allSettled([
+    getFinanceSummary(),
+    getAllCommissions(),
+    getWithdrawals(),
+  ]);
+
+  if (summary.status === "fulfilled") {
+    adminFinanceSummary = summary.value;
+  }
+  if (commissions.status === "fulfilled") {
+    financeCommissions = commissions.value;
+  }
+  if (withdrawals.status === "fulfilled") {
+    financeWithdrawals = withdrawals.value;
+  }
+
+  renderFinance();
+
+  const failed = [summary, commissions, withdrawals].filter(
+    (result) => result.status === "rejected"
+  );
+  if (failed.length > 0) {
+    if (page.financeErrorMessage) {
+      page.financeErrorMessage.textContent =
+        failed[0].reason?.message ||
+        "Platform finances could not be loaded right now.";
+    }
+    if (page.financeError) page.financeError.hidden = false;
+  }
+}
+
+/** Refresh every finance view after a mutation. */
+async function reloadFinance() {
+  try {
+    const [summary, commissions, withdrawals] = await Promise.all([
+      getFinanceSummary(),
+      getAllCommissions(),
+      getWithdrawals(),
+    ]);
+    adminFinanceSummary = summary;
+    financeCommissions = commissions;
+    financeWithdrawals = withdrawals;
+    renderFinance();
+  } catch (error) {
+    if (page.financeErrorMessage) {
+      page.financeErrorMessage.textContent = error?.message;
+    }
+    if (page.financeError) page.financeError.hidden = false;
+  }
+}
+
+function renderFinance() {
+  renderFinanceSummary();
+  renderFinanceCommissions();
+  renderFinanceWithdrawals();
+}
+
+function renderFinanceSummary() {
+  const stats = adminFinanceSummary;
+  if (!stats) {
+    page.financeEarned.textContent = "—";
+    page.financeReleased.textContent = "—";
+    page.financeWithdrawn.textContent = "—";
+    page.financePendingCount.textContent = "—";
+    page.financePendingAmount.textContent = "Withdrawals awaiting action";
+    return;
+  }
+  page.financeEarned.textContent = formatCurrency(stats.totalCommissionEarned);
+  page.financeReleased.textContent = formatCurrency(stats.totalCommissionReleased);
+  page.financeWithdrawn.textContent = formatCurrency(stats.totalWithdrawn);
+  page.financePendingCount.textContent = String(stats.pendingWithdrawalCount);
+  page.financePendingAmount.textContent =
+    `${formatCurrency(stats.pendingWithdrawals)} in review`;
+}
+
+function renderFinanceCommissions() {
+  page.commissionsCount.textContent = `(${financeCommissions.length})`;
+
+  if (financeCommissions.length === 0) {
+    page.commissionsTable.hidden = true;
+    page.commissionsEmpty.hidden = false;
+    return;
+  }
+
+  page.commissionsTable.hidden = false;
+  page.commissionsEmpty.hidden = true;
+  page.commissionsList.innerHTML = financeCommissions
+    .map(commissionRowTemplate)
+    .join("");
+}
+
+function commissionStatusClass(status) {
+  return {
+    [COMMISSION_STATUS.PENDING]: "badge--info",
+    [COMMISSION_STATUS.RELEASED]: "badge--success",
+    [COMMISSION_STATUS.REVERSED]: "badge--danger",
+  }[status] || "badge--outline";
+}
+
+function commissionRowTemplate(item = {}) {
+  const seller = item.sellerName || `Seller #${item.sellerId}`;
+  return `
+    <tr>
+      <td>${escapeHtml(seller)}</td>
+      <td>${escapeHtml(item.orderNumber || `#${item.orderId}`)}</td>
+      <td>${escapeHtml(formatDate(item.createdAt) || "—")}</td>
+      <td class="u-text-right">${formatCurrency(item.saleAmount, item.currency)}</td>
+      <td class="u-text-right">${formatCurrency(item.commissionAmount, item.currency)}</td>
+      <td class="u-text-right">${formatCurrency(item.netAmount, item.currency)}</td>
+      <td><span class="badge ${commissionStatusClass(item.status)}">${escapeHtml(getCommissionStatusLabel(item.status))}</span></td>
+    </tr>
+  `;
+}
+
+function renderFinanceWithdrawals() {
+  page.withdrawalsCount.textContent = `(${financeWithdrawals.length})`;
+
+  if (financeWithdrawals.length === 0) {
+    page.withdrawalsTable.hidden = true;
+    page.withdrawalsEmpty.hidden = false;
+    return;
+  }
+
+  page.withdrawalsTable.hidden = false;
+  page.withdrawalsEmpty.hidden = true;
+  page.withdrawalsList.innerHTML = financeWithdrawals
+    .map(withdrawalRowTemplate)
+    .join("");
+}
+
+function withdrawalStatusClass(status) {
+  return {
+    [WITHDRAWAL_STATUS.PENDING]: "badge--info",
+    [WITHDRAWAL_STATUS.PROCESSING]: "badge--primary",
+    [WITHDRAWAL_STATUS.COMPLETED]: "badge--success",
+    [WITHDRAWAL_STATUS.REJECTED]: "badge--danger",
+    [WITHDRAWAL_STATUS.CANCELLED]: "badge--outline",
+  }[status] || "badge--outline";
+}
+
+/** Mask an account number, keeping only the last four digits. */
+function maskAccountNumber(number = "") {
+  const digits = String(number).replace(/\s+/g, "");
+  if (digits.length === 0) return "";
+  if (digits.length <= 4) return `•••• ${digits}`;
+  return `•••• ${digits.slice(-4)}`;
+}
+
+function withdrawalRowTemplate(item = {}) {
+  const bank = item.bankName
+    ? `${item.bankName} · ${maskAccountNumber(item.accountNumber)}`
+    : "";
+  const holder = item.accountHolderName || bank || "—";
+  const bankLine = bank
+    ? `<br /><span class="admin-table__muted">${escapeHtml(bank)}</span>`
+    : "";
+
+  let actions = "";
+  if (item.status === WITHDRAWAL_STATUS.PENDING) {
+    actions = `
+      <button class="btn btn--primary btn--sm" type="button"
+        data-withdrawal-status="${escapeHtml(item.id)}" data-to="${WITHDRAWAL_STATUS.PROCESSING}">Approve</button>
+      <button class="btn btn--danger btn--sm" type="button"
+        data-withdrawal-status="${escapeHtml(item.id)}" data-to="${WITHDRAWAL_STATUS.REJECTED}">Reject</button>
+    `;
+  } else if (item.status === WITHDRAWAL_STATUS.PROCESSING) {
+    actions = `
+      <button class="btn btn--primary btn--sm" type="button"
+        data-withdrawal-status="${escapeHtml(item.id)}" data-to="${WITHDRAWAL_STATUS.COMPLETED}">Payout sent</button>
+      <button class="btn btn--danger btn--sm" type="button"
+        data-withdrawal-status="${escapeHtml(item.id)}" data-to="${WITHDRAWAL_STATUS.REJECTED}">Reject</button>
+    `;
+  }
+
+  return `
+    <tr>
+      <td>${escapeHtml(item.reference || `#${item.id}`)}</td>
+      <td>${escapeHtml(holder)}${bankLine}</td>
+      <td>${escapeHtml(formatDate(item.createdAt) || "—")}</td>
+      <td class="u-text-right">${formatCurrency(item.amount, item.currency)}</td>
+      <td><span class="badge ${withdrawalStatusClass(item.status)}">${escapeHtml(getWithdrawalStatusLabel(item.status))}</span></td>
+      <td class="u-text-right">${actions}</td>
     </tr>
   `;
 }

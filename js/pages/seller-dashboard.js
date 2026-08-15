@@ -23,7 +23,7 @@ import {
   isAuthenticated,
   signInPreview,
 } from "../services/authService.js";
-import { USER_ROLES, isPreviewMode } from "../config.js";
+import { DEFAULT_CURRENCY, USER_ROLES, isPreviewMode } from "../config.js";
 import {
   ORDER_STATUS,
   getOrderStatusLabel,
@@ -57,6 +57,27 @@ import {
   buildCategoryOptions,
   findBackendCategoryId,
 } from "../services/categoryMapping.js";
+import {
+  COMMISSION_STATUS,
+  MIN_WITHDRAWAL_AMOUNT,
+  getCommissionStatusLabel,
+  getTransactionTypeLabel,
+  getWithdrawalStatusLabel,
+  transactionAmountSigned,
+  WITHDRAWAL_STATUS,
+} from "../services/sellerWalletService.js";
+import {
+  addBankAccount,
+  cancelWithdrawal,
+  deleteBankAccount,
+  getBankAccounts,
+  getCommissions,
+  getWallet,
+  getWalletTransactions,
+  getWithdrawals,
+  requestWithdrawal,
+  updateBankAccount,
+} from "../services/sellerWalletService.js";
 
 const IMAGE_FALLBACK = pageUrl("images/placeholder.svg");
 
@@ -86,11 +107,37 @@ const page = {
   timelineWrap: null,
   timelineList: null,
   timelineEmpty: null,
+  statAvailable: null,
+  statPending: null,
+  statEarned: null,
+  statWithdrawn: null,
+  financeError: null,
+  financeErrorMessage: null,
+  withdrawForm: null,
+  withdrawHint: null,
+  withdrawBank: null,
+  bankForm: null,
+  bankAccountsList: null,
+  bankAccountsEmpty: null,
+  commissionsWrap: null,
+  commissionsList: null,
+  commissionsEmpty: null,
+  transactionsWrap: null,
+  transactionsList: null,
+  transactionsEmpty: null,
+  withdrawalsWrap: null,
+  withdrawalsList: null,
+  withdrawalsEmpty: null,
 };
 
 let deleteTargetId = null;
 let dashboardSummary = null;
 let deliveryRequests = [];
+let walletData = null;
+let bankAccounts = [];
+let walletCommissions = [];
+let walletTransactions = [];
+let walletWithdrawals = [];
 
 /** Supabase <-> backend category pairs used by the product form
  *  (see loadCategoryOptions). Each entry carries the Spring Boot
@@ -144,6 +191,27 @@ document.addEventListener("DOMContentLoaded", () => {
   page.timelineWrap = $("[data-timeline-wrap]");
   page.timelineList = $("[data-timeline-list]");
   page.timelineEmpty = $("[data-timeline-empty]");
+  page.statAvailable = $("[data-stat-available]");
+  page.statPending = $("[data-stat-pending]");
+  page.statEarned = $("[data-stat-earned]");
+  page.statWithdrawn = $("[data-stat-withdrawn]");
+  page.financeError = $("[data-finance-error]");
+  page.financeErrorMessage = $("[data-finance-error-message]");
+  page.withdrawForm = $("[data-withdraw-form]");
+  page.withdrawHint = $("[data-withdraw-hint]");
+  page.withdrawBank = $("[data-withdraw-bank]");
+  page.bankForm = $("[data-bank-form]");
+  page.bankAccountsList = $("[data-bank-accounts-list]");
+  page.bankAccountsEmpty = $("[data-bank-accounts-empty]");
+  page.commissionsWrap = $("[data-commissions-wrap]");
+  page.commissionsList = $("[data-commissions-list]");
+  page.commissionsEmpty = $("[data-commissions-empty]");
+  page.transactionsWrap = $("[data-transactions-wrap]");
+  page.transactionsList = $("[data-transactions-list]");
+  page.transactionsEmpty = $("[data-transactions-empty]");
+  page.withdrawalsWrap = $("[data-withdrawals-wrap]");
+  page.withdrawalsList = $("[data-withdrawals-list]");
+  page.withdrawalsEmpty = $("[data-withdrawals-empty]");
 
   $("[data-seller-name]").textContent = getDisplayName() || "Seller";
 
@@ -152,6 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
   loadCategoryOptions();
   loadDashboard();
   loadAnalytics();
+  loadFinance();
   syncDeliveryRequests();
 });
 
@@ -332,6 +401,18 @@ function bindEvents() {
       syncDeliveryRequests();
     }
   });
+
+  // Withdraw form
+  page.withdrawForm.addEventListener("submit", requestWithdrawalSubmit);
+
+  // Bank account form
+  page.bankForm.addEventListener("submit", saveBankAccount);
+
+  // Bank account actions (make default / delete)
+  page.bankAccountsList.addEventListener("click", handleBankAccountAction);
+
+  // Cancel a pending withdrawal
+  page.withdrawalsList.addEventListener("click", handleWithdrawalAction);
 }
 
 function renderAll() {
@@ -653,6 +734,394 @@ function timelineRowTemplate(point = {}) {
       <td class="u-text-right">${formatCurrency(point.amount)}</td>
     </tr>
   `;
+}
+
+/* ---- Finance (wallet) ---- */
+
+/** Load the wallet ledger from the backend. Failures surface the
+ *  finance error banner instead of fabricated balances. */
+async function loadFinance() {
+  const [wallet, commissions, transactions, accounts, withdrawals] =
+    await Promise.allSettled([
+      getWallet(),
+      getCommissions(),
+      getWalletTransactions(),
+      getBankAccounts(),
+      getWithdrawals(),
+    ]);
+
+  if (wallet.status === "fulfilled") walletData = wallet.value;
+  if (commissions.status === "fulfilled") walletCommissions = commissions.value;
+  if (transactions.status === "fulfilled") walletTransactions = transactions.value;
+  if (accounts.status === "fulfilled") bankAccounts = accounts.value;
+  if (withdrawals.status === "fulfilled") walletWithdrawals = withdrawals.value;
+
+  renderFinance();
+
+  const failed = [wallet, commissions, transactions, accounts, withdrawals].filter(
+    (result) => result.status === "rejected"
+  );
+  if (failed.length > 0) {
+    showFinanceError(failed[0].reason?.message);
+  }
+}
+
+/** Show the finance error banner with the first failure message. */
+function showFinanceError(message) {
+  if (!page.financeError) return;
+  if (message && page.financeErrorMessage) {
+    page.financeErrorMessage.textContent = message;
+  }
+  page.financeError.hidden = false;
+}
+
+/** Refresh every wallet view after a mutation. */
+async function reloadFinance() {
+  try {
+    const [wallet, commissions, transactions, accounts, withdrawals] =
+      await Promise.all([
+        getWallet(),
+        getCommissions(),
+        getWalletTransactions(),
+        getBankAccounts(),
+        getWithdrawals(),
+      ]);
+    walletData = wallet;
+    walletCommissions = commissions;
+    walletTransactions = transactions;
+    bankAccounts = accounts;
+    walletWithdrawals = withdrawals;
+    renderFinance();
+  } catch (error) {
+    showFinanceError(error?.message);
+  }
+}
+
+/** The wallet currency (authoritative from the backend). */
+function walletCurrency() {
+  return walletData?.currency || DEFAULT_CURRENCY;
+}
+
+function renderFinance() {
+  renderWalletStats();
+  renderBankAccounts();
+  renderCommissions();
+  renderTransactions();
+  renderWithdrawals();
+}
+
+function renderWalletStats() {
+  if (!walletData) {
+    page.statAvailable.textContent = "—";
+    page.statPending.textContent = "—";
+    page.statEarned.textContent = "—";
+    page.statWithdrawn.textContent = "—";
+    return;
+  }
+  const currency = walletCurrency();
+  page.statAvailable.textContent = formatCurrency(walletData.availableBalance, currency);
+  page.statPending.textContent = formatCurrency(walletData.pendingBalance, currency);
+  page.statEarned.textContent = formatCurrency(walletData.totalEarned, currency);
+  page.statWithdrawn.textContent = formatCurrency(walletData.totalWithdrawn, currency);
+}
+
+/** Mask an account number, keeping only the last four digits. */
+function maskAccountNumber(number = "") {
+  const digits = String(number).replace(/\s+/g, "");
+  if (digits.length === 0) return "";
+  if (digits.length <= 4) return `•••• ${digits}`;
+  return `•••• ${digits.slice(-4)}`;
+}
+
+function renderBankAccounts() {
+  const hasAccounts = bankAccounts.length > 0;
+
+  page.withdrawBank.innerHTML =
+    '<option value="">Default account</option>' +
+    bankAccounts
+      .map(
+        (account) =>
+          `<option value="${escapeHtml(account.id)}" ${account.isDefault ? "selected" : ""}>` +
+          `${escapeHtml(account.bankName || "Bank account")} · ${escapeHtml(maskAccountNumber(account.accountNumber))}` +
+          `</option>`
+      )
+      .join("");
+
+  page.bankAccountsEmpty.hidden = hasAccounts;
+  page.bankAccountsList.innerHTML = bankAccounts.map(bankAccountTemplate).join("");
+
+  if (page.withdrawHint) {
+    page.withdrawHint.textContent =
+      `Minimum withdrawal ${formatCurrency(MIN_WITHDRAWAL_AMOUNT, walletCurrency())}.` +
+      (hasAccounts ? "" : " Add a bank account to withdraw.");
+  }
+}
+
+function bankAccountTemplate(account = {}) {
+  const meta = [
+    maskAccountNumber(account.accountNumber),
+    account.country,
+  ].filter(Boolean).join(" · ");
+  const defaultBadge = account.isDefault
+    ? '<span class="badge badge--success">Default</span>'
+    : "";
+  return `
+    <li class="bank-account">
+      <div class="bank-account__info">
+        <p class="bank-account__name">
+          ${escapeHtml(account.bankName || "Bank account")} ${defaultBadge}
+        </p>
+        <p class="bank-account__meta">
+          ${escapeHtml(account.accountHolderName || "")}${meta ? ` · ${escapeHtml(meta)}` : ""}
+        </p>
+      </div>
+      <div class="bank-account__actions">
+        ${
+          account.isDefault
+            ? ""
+            : `<button class="btn btn--outline btn--sm" type="button"
+                data-bank-default="${escapeHtml(account.id)}">Make default</button>`
+        }
+        <button class="btn btn--danger btn--sm" type="button"
+          data-bank-delete="${escapeHtml(account.id)}">Delete</button>
+      </div>
+    </li>
+  `;
+}
+
+async function saveBankAccount(event) {
+  event.preventDefault();
+  const form = page.bankForm;
+  clearFieldErrors(form);
+  const values = readFormData(form);
+  const errors = validate(values, BANK_RULES);
+  if (Object.keys(errors).length) {
+    showFieldErrors(form, errors);
+    return;
+  }
+
+  setSubmitState(form, true);
+  try {
+    const account = await addBankAccount(values);
+    form.reset();
+    showToast({
+      title: "Bank account saved",
+      message: `${account.bankName} can now be used for withdrawals.`,
+      type: "success",
+    });
+    await reloadFinance();
+  } catch (error) {
+    showToast({
+      title: "Save failed",
+      message:
+        error?.message || "The bank account could not be saved.",
+      type: "error",
+    });
+  } finally {
+    setSubmitState(form, false);
+  }
+}
+
+const BANK_RULES = {
+  bankName: [validators.required],
+  accountHolderName: [validators.required],
+  accountNumber: [validators.required],
+  swiftCode: [validators.maxLength(20)],
+};
+
+async function handleBankAccountAction(event) {
+  const del = event.target.closest("[data-bank-delete]");
+  const setDefault = event.target.closest("[data-bank-default]");
+  const id = del?.dataset.bankDelete || setDefault?.dataset.bankDefault;
+  if (!id) return;
+
+  const button = del || setDefault;
+  button.disabled = true;
+  try {
+    if (del) {
+      await deleteBankAccount(id);
+      showToast({ title: "Bank account deleted", type: "info" });
+    } else {
+      const existing = bankAccounts.find(
+        (account) => String(account.id) === String(id)
+      );
+      const account = await updateBankAccount(id, {
+        ...existing,
+        isDefault: true,
+      });
+      showToast({
+        title: "Default account updated",
+        message: `${account.bankName} is now the default.`,
+        type: "success",
+      });
+    }
+    await reloadFinance();
+  } catch (error) {
+    showToast({
+      title: "Update failed",
+      message:
+        error?.message || "The bank account could not be updated.",
+      type: "error",
+    });
+    button.disabled = false;
+  }
+}
+
+async function requestWithdrawalSubmit(event) {
+  event.preventDefault();
+  const form = page.withdrawForm;
+  clearFieldErrors(form);
+  const values = readFormData(form);
+  const errors = validate(values, {
+    amount: [validators.required, validators.numeric, validators.positive],
+  });
+  if (Object.keys(errors).length) {
+    showFieldErrors(form, errors);
+    return;
+  }
+
+  setSubmitState(form, true);
+  try {
+    const withdrawal = await requestWithdrawal({
+      amount: Number(values.amount),
+      bankAccountId: values.bankAccountId
+        ? Number(values.bankAccountId)
+        : null,
+    });
+    form.reset();
+    showToast({
+      title: "Withdrawal requested",
+      message: `${withdrawal.reference} (${formatCurrency(withdrawal.amount, withdrawal.currency)}) is now pending review.`,
+      type: "success",
+    });
+    await reloadFinance();
+  } catch (error) {
+    showToast({
+      title: "Withdrawal not requested",
+      message:
+        error?.message || "The withdrawal could not be requested.",
+      type: "error",
+    });
+  } finally {
+    setSubmitState(form, false);
+  }
+}
+
+function renderCommissions() {
+  const isEmpty = walletCommissions.length === 0;
+  page.commissionsWrap.hidden = isEmpty;
+  page.commissionsEmpty.hidden = !isEmpty;
+  page.commissionsList.innerHTML = walletCommissions
+    .map(commissionRowTemplate)
+    .join("");
+}
+
+function commissionRowTemplate(item = {}) {
+  const statusClass = {
+    [COMMISSION_STATUS.PENDING]: "badge--info",
+    [COMMISSION_STATUS.RELEASED]: "badge--success",
+    [COMMISSION_STATUS.REVERSED]: "badge--danger",
+  }[item.status] || "badge--outline";
+  return `
+    <tr>
+      <td>${escapeHtml(item.orderNumber || `#${item.orderId}`)}</td>
+      <td>${escapeHtml(formatDate(item.createdAt) || "—")}</td>
+      <td class="u-text-right">${formatCurrency(item.saleAmount, item.currency)}</td>
+      <td class="u-text-right">${formatCurrency(item.commissionAmount, item.currency)}</td>
+      <td class="u-text-right">${formatCurrency(item.netAmount, item.currency)}</td>
+      <td><span class="badge ${statusClass}">${escapeHtml(getCommissionStatusLabel(item.status))}</span></td>
+    </tr>
+  `;
+}
+
+function renderTransactions() {
+  const isEmpty = walletTransactions.length === 0;
+  page.transactionsWrap.hidden = isEmpty;
+  page.transactionsEmpty.hidden = !isEmpty;
+  page.transactionsList.innerHTML = walletTransactions
+    .map(transactionRowTemplate)
+    .join("");
+}
+
+function transactionRowTemplate(item = {}) {
+  const currency = walletCurrency();
+  const signed = transactionAmountSigned(item.type, item.amount);
+  const amountClass =
+    signed < 0 ? "finance-amount--debit" : "finance-amount--credit";
+  return `
+    <tr>
+      <td>${escapeHtml(formatDate(item.createdAt) || "—")}</td>
+      <td>${escapeHtml(getTransactionTypeLabel(item.type))}</td>
+      <td>${escapeHtml(item.description || "")}</td>
+      <td class="u-text-right"><span class="${amountClass}">${formatCurrency(signed, currency)}</span></td>
+      <td class="u-text-right">${formatCurrency(item.balanceAfter, currency)}</td>
+    </tr>
+  `;
+}
+
+function renderWithdrawals() {
+  const isEmpty = walletWithdrawals.length === 0;
+  page.withdrawalsWrap.hidden = isEmpty;
+  page.withdrawalsEmpty.hidden = !isEmpty;
+  page.withdrawalsList.innerHTML = walletWithdrawals
+    .map(withdrawalRowTemplate)
+    .join("");
+}
+
+function withdrawalStatusClass(status) {
+  return {
+    [WITHDRAWAL_STATUS.PENDING]: "badge--info",
+    [WITHDRAWAL_STATUS.PROCESSING]: "badge--primary",
+    [WITHDRAWAL_STATUS.COMPLETED]: "badge--success",
+    [WITHDRAWAL_STATUS.REJECTED]: "badge--danger",
+    [WITHDRAWAL_STATUS.CANCELLED]: "badge--outline",
+  }[status] || "badge--outline";
+}
+
+function withdrawalRowTemplate(item = {}) {
+  const bank =
+    [item.bankName, maskAccountNumber(item.accountNumber)]
+      .filter(Boolean)
+      .join(" · ") || "—";
+  const cancel =
+    item.status === WITHDRAWAL_STATUS.PENDING
+      ? `<button class="btn btn--outline btn--sm" type="button"
+          data-withdrawal-cancel="${escapeHtml(item.id)}">Cancel</button>`
+      : "";
+  return `
+    <tr>
+      <td>${escapeHtml(item.reference || `#${item.id}`)}</td>
+      <td>${escapeHtml(formatDate(item.createdAt) || "—")}</td>
+      <td class="u-text-right">${formatCurrency(item.amount, item.currency)}</td>
+      <td>${escapeHtml(bank)}</td>
+      <td><span class="badge ${withdrawalStatusClass(item.status)}">${escapeHtml(getWithdrawalStatusLabel(item.status))}</span></td>
+      <td class="u-text-right">${cancel}</td>
+    </tr>
+  `;
+}
+
+async function handleWithdrawalAction(event) {
+  const button = event.target.closest("[data-withdrawal-cancel]");
+  if (!button) return;
+
+  button.disabled = true;
+  try {
+    const withdrawal = await cancelWithdrawal(button.dataset.withdrawalCancel);
+    showToast({
+      title: "Withdrawal cancelled",
+      message: `${withdrawal.reference} was cancelled and the funds returned to your wallet.`,
+      type: "success",
+    });
+    await reloadFinance();
+  } catch (error) {
+    showToast({
+      title: "Cancel failed",
+      message:
+        error?.message || "The withdrawal could not be cancelled.",
+      type: "error",
+    });
+    button.disabled = false;
+  }
 }
 
 /* ---- Orders ---- */

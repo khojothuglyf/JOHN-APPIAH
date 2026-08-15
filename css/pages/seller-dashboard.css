@@ -336,9 +336,101 @@
   }
 }
 
+/* ---- Wallet & payouts ---- */
+.wallet-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.wallet-panel {
+  padding: var(--space-5);
+}
+
+.wallet-panel__title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.wallet-panel__copy {
+  margin-top: var(--space-1);
+  margin-bottom: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  line-height: 1.7;
+}
+
+.wallet-panel__hint {
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.bank-accounts {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.bank-account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+}
+
+.bank-account__info {
+  min-width: 200px;
+}
+
+.bank-account__name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+.bank-account__meta {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.bank-account__actions {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.finance-amount--credit {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-success);
+}
+
+.finance-amount--debit {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-danger);
+}
+
 @media (min-width: 720px) {
   .stat-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 992px) {
+  .wallet-grid {
+    grid-template-columns: repeat(2, 1fr);
+    align-items: start;
   }
 }
 

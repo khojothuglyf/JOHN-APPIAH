@@ -112,7 +112,7 @@ function renderProduct(product) {
     crumbCategory.innerHTML = `<a href="products.html">${escapeHtml(product.category.name)}</a>`;
   }
   setText("[data-crumb-name]", product.name);
-  document.title = `${product.name || "Product"} | TradeSphere`;
+  document.title = `${product.name || "Product"} | TradeWide`;
 }
 
 function renderStock() {

@@ -63,7 +63,7 @@ export async function mountNavbar(root) {
   } catch (error) {
     console.error(error);
     root.innerHTML =
-      '<a class="navbar-fallback" href="index.html">TradeSphere</a>';
+      '<a class="navbar-fallback" href="index.html">TradeWide</a>';
     return;
   }
 

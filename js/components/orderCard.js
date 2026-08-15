@@ -154,6 +154,14 @@ export function orderDetailsTemplate(order = {}) {
           <span>Subtotal</span>
           <strong>${formatCurrency(order.subtotal)}</strong>
         </div>
+        ${
+          Number(order.discount) > 0
+            ? `<div class="cart-summary__row cart-summary__row--discount">
+                <span>Discount</span>
+                <strong>−${formatCurrency(order.discount)}</strong>
+              </div>`
+            : ""
+        }
         <div class="cart-summary__row">
           <span>Shipping</span>
           <strong>${order.shippingCost > 0 ? formatCurrency(order.shippingCost) : "Free"}</strong>

@@ -14,7 +14,7 @@ export {
   SUPABASE_ANON_KEY,
 } from "./api-config.js";
 
-export const APP_NAME = "TradeSphere";
+export const APP_NAME = "TradeWide";
 
 /**
  * True when the app is served from a local development origin
@@ -139,6 +139,24 @@ export const API_ENDPOINTS = {
       salesByCategory: "/admin/analytics/sales-by-category",
       revenueTimeline: "/admin/analytics/revenue-timeline",
     },
+  },
+  wallet: {
+    get: "/wallet",
+    transactions: "/wallet/transactions",
+    commissions: "/wallet/commissions",
+    bankAccounts: "/wallet/bank-accounts",
+    addBankAccount: "/wallet/bank-accounts",
+    updateBankAccount: "/wallet/bank-accounts/{bankAccountId}",
+    deleteBankAccount: "/wallet/bank-accounts/{bankAccountId}",
+    withdrawals: "/wallet/withdrawals",
+    requestWithdrawal: "/wallet/withdrawals",
+    cancelWithdrawal: "/wallet/withdrawals/{withdrawalId}/cancel",
+  },
+  finance: {
+    summary: "/admin/finance/summary",
+    commissions: "/admin/finance/commissions",
+    withdrawals: "/admin/finance/withdrawals",
+    updateWithdrawalStatus: "/admin/finance/withdrawals/{withdrawalId}/status",
   },
   contact: {
     // planned: no backend endpoints yet
